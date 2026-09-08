@@ -1,0 +1,73 @@
+---
+title: "Case Study"
+author: "Team 3"
+format: revealjs
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished presentation. To learn more about Quarto presentations see <https://quarto.org/docs/presentations/>.
+
+## Bullets
+
+When you click the **Render** button a document will be generated that includes:
+
+- Content authored with markdown
+- Output from executable code
+
+## Code
+
+When you click the **Render** button a presentation will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r data}
+# first, import all necessary packages
+library(ggplot2)
+library(dplyr) # seems very useful, ill use it just for conditional removal of rows from our data
+
+# get our data set
+df <- `2026.08.MD`
+
+# take the dataset relevant to us
+ds <- df[c("V1","V7","V74","V77")] 
+
+# rename columns to be more expressive
+colnames(ds) <- c("Date","Industrial Production","Consumer Price Index","Fed Fund Rate") 
+
+# remove the weird two rows from the original data
+ds <- ds[-c(1:2), ] 
+
+# check types of the columns, they are all charater type
+print("Check the types of the columns to see if we must adjust them")
+sapply(ds, class) 
+
+# they were all character type, convert to the correct respective types
+#as.numeric(ds$`Industrial Production`)
+#as.numeric(ds$`Consumer Price Index`)
+#as.numeric(ds$`Fed Fund Rate`)
+#as.Date(ds$Date, format="%d/%m/%Y")
+
+ds <- transform(
+  ds, `Date` = as.Date(ds$Date, format="%d/%m/%Y"), `Industrial Production` = as.numeric(ds$`Industrial Production`), `Consumer Price Index` = as.numeric(ds$`Consumer Price Index`), `Fed Fund Rate` = as.numeric(ds$`Fed Fund Rate`))
+
+# check they are the correct type
+print("Check the types of the columns again to ensure they are correct")
+sapply(ds, class) 
+ds
+# we now have the correct types
+
+# now we will remove data from the end of 2019 onwards to avoid looking at the anomalous data from covid-19. we use dplyr
+ds <- ds %>%
+  filter(`Date`<"2020-01-01")
+
+ds
+```
+
+Now that we have cleaned and prepared our data, we can move onto to exploring it.
+
+```{r visual}
+# get an initial look into them by plotting them
+ggplot(aes(x = `Date`, y = `Industrial Production`), data = ds) + geom_point()
+ggplot(aes(x = `Date`, y = `Consumer Price Index`), data = ds) + geom_point()
+ggplot(aes(x = `Date`, y = `Fed Fund Rate`), data = ds) + geom_point()
+```
