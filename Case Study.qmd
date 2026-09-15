@@ -29,7 +29,7 @@ library(dplyr) # seems very useful, ill use it just for conditional removal of r
 df <- `2026.08.MD`
 
 # take the dataset relevant to us
-ds <- df[c("V1","V7","V74","V77")] 
+ds <- df[c("V1","V7","V105","V77")] 
 
 # rename columns to be more expressive
 colnames(ds) <- c("Date","IndustrialProduction","ConsumerPriceIndex","FedFundRate") 
