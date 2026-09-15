@@ -32,7 +32,7 @@ df <- `2026.08.MD`
 ds <- df[c("V1","V7","V74","V77")] 
 
 # rename columns to be more expressive
-colnames(ds) <- c("Date","Industrial Production","Consumer Price Index","Fed Fund Rate") 
+colnames(ds) <- c("Date","IndustrialProduction","ConsumerPriceIndex","FedFundRate") 
 
 # remove the weird two rows from the original data
 ds <- ds[-c(1:2), ] 
@@ -48,7 +48,7 @@ sapply(ds, class)
 #as.Date(ds$Date, format="%d/%m/%Y")
 
 ds <- transform(
-  ds, `Date` = as.Date(ds$Date, format="%d/%m/%Y"), `Industrial Production` = as.numeric(ds$`Industrial Production`), `Consumer Price Index` = as.numeric(ds$`Consumer Price Index`), `Fed Fund Rate` = as.numeric(ds$`Fed Fund Rate`))
+  ds, `Date` = as.Date(ds$Date, format="%d/%m/%Y"), `IndustrialProduction` = as.numeric(ds$`IndustrialProduction`), `ConsumerPriceIndex` = as.numeric(ds$`ConsumerPriceIndex`), `FedFundRate` = as.numeric(ds$`FedFundRate`))
 
 # check they are the correct type
 print("Check the types of the columns again to ensure they are correct")
@@ -67,9 +67,7 @@ Now that we have cleaned and prepared our data, we can move onto to exploring it
 
 ```{r visual}
 # get an initial look into them by plotting them
-ggplot(aes(x = `Date`, y = `Industrial Production`), data = ds) + geom_point()
-ggplot(aes(x = `Date`, y = `Consumer Price Index`), data = ds) + geom_point()
-ggplot(aes(x = `Date`, y = `Fed Fund Rate`), data = ds) + geom_point()
+ggplot(aes(x = `Date`, y = `IndustrialProduction`), data = ds) + geom_point()
+ggplot(aes(x = `Date`, y = `ConsumerPriceIndex`), data = ds) + geom_point()
+ggplot(aes(x = `Date`, y = `FedFundRate`), data = ds) + geom_point()
 ```
-
-gtgfyf
