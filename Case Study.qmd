@@ -56,3 +56,9 @@ ggplot(aes(x = `Date`, y = `IndustrialProduction`), data = ds) + geom_point()
 ggplot(aes(x = `Date`, y = `ConsumerPriceIndex`), data = ds) + geom_point()
 ggplot(aes(x = `Date`, y = `FedFundRate`), data = ds) + geom_point()
 ```
+
+Apply the necessary transformations for the time series according to the Appendix of McCracken and Ng (2016):
+
+i.) Δ*xt* for FedFundRate\
+ii.) Δ\^2log (*xt*) for ConsumerPriceIndex\
+iii.) Δlog (*xt*) for IndustrialProduction
