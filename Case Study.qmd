@@ -97,3 +97,9 @@ The plots show the transformed time series. The intuition behind the time series
 i.) d_FFR –\> monthly Fed Fund Rate adjustment;\
 ii.) d2_log_cpi –\> acceleration of CPI (analogous to acceleration being the second derivative of distance);\
 iii.) d_log_IP –\> Month-over-month IP growth rate.
+
+## Estimating VAR models and selecting the lag order
+
+```{r}
+
+```
