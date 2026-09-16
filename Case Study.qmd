@@ -59,6 +59,41 @@ ggplot(aes(x = `Date`, y = `FedFundRate`), data = ds) + geom_point()
 
 Apply the necessary transformations for the time series according to the Appendix of McCracken and Ng (2016):
 
-i.) Δ*xt* for FedFundRate\
-ii.) Δ\^2log (*xt*) for ConsumerPriceIndex\
-iii.) Δlog (*xt*) for IndustrialProduction
+i.) Δ*xt* for FedFundRate;\
+ii.) Δ\^2log (*xt*) for ConsumerPriceIndex;\
+iii.) Δlog (*xt*) for IndustrialProduction.
+
+```{r}
+# apply the necessary transformations to make the series stationary
+
+# FedFundRate (FFR)
+d_FFR <- diff(ds$FedFundRate)
+
+# ConsumerPriceIndex (CPI)
+d2_log_cpi <- diff(log(ds$ConsumerPriceIndex), differences = 2) # differencing two times
+
+# IndustrialProduction (IP)
+d_log_IP <- diff(log(ds$IndustrialProduction))
+
+# Transform the dataframe. Add new colums for stationary series
+ds_transformed <- ds %>%
+  mutate(
+    d_log_IP   = c(NA, diff(log(IndustrialProduction))), # Fill first row with NA. Differencing deletes first observation.
+    d2_log_cpi = c(NA, NA, diff(log(ConsumerPriceIndex), differences = 2)), # Fill first two rows with NA to make up for the differencing.
+    d_FFR  = c(NA, diff(FedFundRate)) # Fill first row with NA to make up for differencing
+  ) %>%
+  
+# Drop the first 2 rows where differencing CPI was filled with NAs to maintain a balanced panel. Dataframe begins at row 3.
+filter(!is.na(d2_log_cpi))
+  
+# Plot the transformed series
+plot(ds_transformed$Date, ds_transformed$d_log_IP)
+plot(ds_transformed$Date, ds_transformed$d2_log_cpi)
+plot(ds_transformed$Date, ds_transformed$d_FFR)
+```
+
+The plots show the transformed time series. The intuition behind the time series is now:
+
+i.) d_FFR –\> monthly Fed Fund Rate adjustment;\
+ii.) d2_log_cpi –\> acceleration of CPI (analogous to acceleration being the second derivative of distance);\
+iii.) d_log_IP –\> Month-over-month IP growth rate.
