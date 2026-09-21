@@ -5,16 +5,25 @@ format: revealjs
 editor: visual
 ---
 
+# Case Study 2: Structural Vector AutoRegressive Models
+
+## Data
+
+To start our processes, we first need to import our data and relevant libraries.
+
+We will use truncate the data set to only include dates between the start of 1959 and the end of 2019.
+
 ```{r data}
 # first, import all necessary packages
 library(ggplot2)
+library(bootUR)
 library(dplyr) # seems very useful, ill use it just for conditional removal of rows from our data
 
 # get our data set
 df <- `2026.08.MD`
-
+df <- read.csv(file="2026-rev-08-MD.csv")
 # take the dataset relevant to us
-ds <- df[c("V1","V7","V105","V77")] 
+ds <- df[c("sasdate","INDPRO","CPIAUCSL","FEDFUNDS")] 
 
 # rename columns to be more expressive
 colnames(ds) <- c("Date","IndustrialProduction","ConsumerPriceIndex","FedFundRate") 
@@ -48,6 +57,8 @@ ds <- ds %>%
 ds
 ```
 
+## Data Exploration
+
 Now that we have cleaned and prepared our data, we can move onto to exploring it.
 
 ```{r visual}
@@ -70,7 +81,7 @@ iii.) Δlog (*xt*) for IndustrialProduction.
 d_FFR <- diff(ds$FedFundRate)
 
 # ConsumerPriceIndex (CPI)
-d2_log_cpi <- diff(log(ds$ConsumerPriceIndex), differences = 2) # differencing two times
+d2_log_CPI <- diff(log(ds$ConsumerPriceIndex), differences = 2) # differencing two times
 
 # IndustrialProduction (IP)
 d_log_IP <- diff(log(ds$IndustrialProduction))
@@ -79,24 +90,129 @@ d_log_IP <- diff(log(ds$IndustrialProduction))
 ds_transformed <- ds %>%
   mutate(
     d_log_IP   = c(NA, diff(log(IndustrialProduction))), # Fill first row with NA. Differencing deletes first observation.
-    d2_log_cpi = c(NA, NA, diff(log(ConsumerPriceIndex), differences = 2)), # Fill first two rows with NA to make up for the differencing.
+    d2_log_CPI = c(NA, NA, diff(log(ConsumerPriceIndex), differences = 2)), # Fill first two rows with NA to make up for the differencing.
     d_FFR  = c(NA, diff(FedFundRate)) # Fill first row with NA to make up for differencing
   ) %>%
   
 # Drop the first 2 rows where differencing CPI was filled with NAs to maintain a balanced panel. Dataframe begins at row 3.
-filter(!is.na(d2_log_cpi))
+filter(!is.na(d2_log_CPI))
   
 # Plot the transformed series
+par(mfrow=c(1,3))
 plot(ds_transformed$Date, ds_transformed$d_log_IP)
-plot(ds_transformed$Date, ds_transformed$d2_log_cpi)
+plot(ds_transformed$Date, ds_transformed$d2_log_CPI)
 plot(ds_transformed$Date, ds_transformed$d_FFR)
 ```
 
 The plots show the transformed time series. The intuition behind the time series is now:
 
 i.) d_FFR –\> monthly Fed Fund Rate adjustment;\
-ii.) d2_log_cpi –\> acceleration of CPI (analogous to acceleration being the second derivative of distance);\
-iii.) d_log_IP –\> Month-over-month IP growth rate.
+ii.) d2_log_CPI –\> acceleration of CPI (analogous to acceleration being the second derivative of distance);\
+iii.) d_log_IP –\> month-over-month IP growth rate.
+
+## Unit Root Testing
+
+In order to provide the VAR models with stationary time series, we need to find out what order of integration they have. In order to do find this order of integration, we do unit root tests following the Pantula principle. We will be using the BootUR package to assist with this, as the boot_adf function will tailor the test statistic to match the structure of the provided data, making the critical values more reliable (is reliable the right word?). These tests will be applied to the non-differenced time series, as the differenced series are clearly (or are they? o.O) stationary already.
+
+We determine the degree of differencing needed by utilising the Pantula principle.
+
+The deterministics we use are
+
+```{r unitroot}
+
+# each unit root test will be conducted in its own code block
+# first we will start by setting d to d_max, here that is 2
+# this means we difference the transformed data twice and then run the unit root tests (with appropriate deterministics) to see whether they have reached stationarity
+
+# set a seed for reproducibility
+set.seed(333)
+
+dmax <- 2
+tffr <- ds$FedFundRate
+tcpi <- log(ds$ConsumerPriceIndex)
+tip <- log(ds$IndustrialProduction)
+
+par(mfrow=c(1,3))
+plot(tip, type = "l", main = "IP")
+plot(tcpi, type = "l", main = "CPI")
+plot(tffr, type = "l", main = "FFR")
+
+```
+
+```{r unitip}
+
+d2ip <- diff(diff(tip))
+d1ip <- diff(tip)
+
+boot_adf(d2ip, deterministics = "none")
+boot_adf(d1ip, deterministics = "intercept")
+boot_adf(tip, deterministics = "trend")
+
+
+par(mfrow=c(1,3))
+plot(tip, type = "l", main = "d=0")
+plot(d1ip, type = "l", main = "d=1")
+plot(d2ip, type = "l", main = "d=2")
+
+```
+
+```{r unitcpi}
+
+d2cpi <- diff(diff(tcpi))
+d1cpi <- diff(tcpi)
+
+boot_adf(d2cpi, deterministics = "none")
+boot_adf(d1cpi, deterministics = "intercept")
+boot_adf(tcpi, deterministics = "trend")
+
+
+par(mfrow=c(1,3))
+plot(tcpi, type = "l", main = "d=0")
+plot(d1cpi, type = "l", main = "d=1")
+plot(d2cpi, type = "l", main = "d=2")
+
+```
+
+```{r unitffr}
+
+d2ffr <- diff(diff(tffr))
+d1ffr <- diff(tffr)
+
+boot_adf(d2ffr, deterministics = "none")
+boot_adf(d1ffr, deterministics = "intercept")
+boot_adf(tffr, deterministics = "trend")
+
+
+par(mfrow=c(1,3))
+plot(tffr, type = "l", main = "d=0")
+plot(d1ffr, type = "l", main = "d=1")
+plot(d2ffr, type = "l", main = "d=2")
+
+```
+
+IR:
+
+- Unit root testing suggests the series is $I(1)$
+
+CPI:
+
+- The unit root testing suggests this series has order of integration $I(2)$, meaning we have to difference it twice (difference the differences) to make it stationary
+
+FFR:
+
+- The resulting unit root testing shows that the FFR is $I(1)$, meaning the FFR is difference-stationary
+
+- Different p-values for the adf() and boot_adf() functions ($p=0.001$ and $p=0.027$ respectively)
+
+- 
+
+```{r orderI}
+
+# check the results of the unit root tests using the order of integration built-in function
+order_integration(tip,max_order=2,method="adf",level=0.05, plot_order=TRUE)
+order_integration(tcpi,max_order=2,method="adf",level=0.05, plot_order=TRUE)
+order_integration(tffr,max_order=2,method="adf",level=0.05, plot_order=TRUE)
+```
 
 ## Estimating VAR models and selecting the lag order
 
