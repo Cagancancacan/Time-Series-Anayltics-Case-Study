@@ -20,7 +20,6 @@ library(bootUR)
 library(dplyr) # seems very useful, ill use it just for conditional removal of rows from our data
 
 # get our data set
-df <- `2026.08.MD`
 df <- read.csv(file="2026-rev-08-MD.csv")
 # take the dataset relevant to us
 ds <- df[c("sasdate","INDPRO","CPIAUCSL","FEDFUNDS")] 
@@ -144,7 +143,7 @@ plot(tffr, type = "l", main = "FFR")
 d2ip <- diff(diff(tip))
 d1ip <- diff(tip)
 
-boot_adf(d2ip, deterministics = "none")
+boot_adf(d2ip, deterministics = "intercept")
 boot_adf(d1ip, deterministics = "intercept")
 boot_adf(tip, deterministics = "trend")
 
@@ -161,7 +160,7 @@ plot(d2ip, type = "l", main = "d=2")
 d2cpi <- diff(diff(tcpi))
 d1cpi <- diff(tcpi)
 
-boot_adf(d2cpi, deterministics = "none")
+boot_adf(d2cpi, deterministics = "intercept")
 boot_adf(d1cpi, deterministics = "intercept")
 boot_adf(tcpi, deterministics = "trend")
 
@@ -178,7 +177,7 @@ plot(d2cpi, type = "l", main = "d=2")
 d2ffr <- diff(diff(tffr))
 d1ffr <- diff(tffr)
 
-boot_adf(d2ffr, deterministics = "none")
+boot_adf(d2ffr, deterministics = "intercept")
 boot_adf(d1ffr, deterministics = "intercept")
 boot_adf(tffr, deterministics = "trend")
 
