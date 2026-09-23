@@ -1062,3 +1062,1066 @@ cat("\\end{center}\n")
 \end{itemize}
 
 ---
+
+```{r}
+#| include: false
+
+# -------------------------------------------------------
+# IRF settings
+# -------------------------------------------------------
+
+irf_horizon <- 48
+irf_runs <- 1000
+irf_ci <- 0.95
+
+variables <- c(
+  "IP",
+  "CPI",
+  "FFR"
+)
+
+
+# -------------------------------------------------------
+# Reduced-form IRFs with bootstrap confidence intervals
+# -------------------------------------------------------
+
+irf_results <- irf(
+  fit_aic,
+  impulse = variables,
+  response = variables,
+  n.ahead = irf_horizon,
+  ortho = FALSE,
+  boot = TRUE,
+  ci = irf_ci,
+  runs = irf_runs,
+  seed = 123
+)
+
+
+# -------------------------------------------------------
+# Extract IRFs by impulse
+# -------------------------------------------------------
+
+irf_ip <- irf_results$irf$IP
+irf_cpi <- irf_results$irf$CPI
+irf_ffr <- irf_results$irf$FFR
+
+lower_ip <- irf_results$Lower$IP
+lower_cpi <- irf_results$Lower$CPI
+lower_ffr <- irf_results$Lower$FFR
+
+upper_ip <- irf_results$Upper$IP
+upper_cpi <- irf_results$Upper$CPI
+upper_ffr <- irf_results$Upper$FFR
+
+
+# -------------------------------------------------------
+# Significance of responses to a policy-rate impulse
+# -------------------------------------------------------
+
+ffr_significance <- data.frame(
+  Horizon = 0:irf_horizon,
+
+  IP = (
+    lower_ffr[, "IP"] > 0 |
+    upper_ffr[, "IP"] < 0
+  ),
+
+  CPI = (
+    lower_ffr[, "CPI"] > 0 |
+    upper_ffr[, "CPI"] < 0
+  ),
+
+  FFR = (
+    lower_ffr[, "FFR"] > 0 |
+    upper_ffr[, "FFR"] < 0
+  )
+)
+
+
+# -------------------------------------------------------
+# Recover point-estimate responses in levels
+# -------------------------------------------------------
+
+# Variables in the estimated VAR:
+#
+# IP  = Δ log(INDPRO)       -> accumulate once
+# CPI = Δ² log(CPIAUCSL)    -> accumulate twice
+# FFR = Δ FEDFUNDS          -> accumulate once
+
+to_levels <- function(irf_matrix) {
+
+  data.frame(
+    Horizon = 0:(nrow(irf_matrix) - 1),
+
+    IP = cumsum(
+      irf_matrix[, "IP"]
+    ),
+
+    CPI = cumsum(
+      cumsum(
+        irf_matrix[, "CPI"]
+      )
+    ),
+
+    FFR = cumsum(
+      irf_matrix[, "FFR"]
+    )
+  )
+}
+
+
+# Responses in levels for each impulse
+
+irf_ip_levels <- to_levels(
+  irf_ip
+)
+
+irf_cpi_levels <- to_levels(
+  irf_cpi
+)
+
+irf_ffr_levels <- to_levels(
+  irf_ffr
+)
+```
+
+## Impulse Response Functions{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} An impulse response function traces how one variable reacts over time to an innovation in another variable
+
+\vspace{0.35em}
+
+\small
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Impulse: variable receiving the initial innovation
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Response: variable whose reaction is followed over subsequent horizons
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  The IRF summarizes the sign, magnitude and persistence of the response
+
+\end{itemize}
+
+---
+
+## IRF Implementation{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Compute IRFs using \texttt{irf()} from the \texttt{vars} package
+
+\vspace{0.4em}
+
+\footnotesize
+
+\texttt{irf(fit\_aic,}
+
+\texttt{\hspace{1em} impulse = variables,}
+
+\texttt{\hspace{1em} response = variables,}
+
+\texttt{\hspace{1em} n.ahead = 48,}
+
+\texttt{\hspace{1em} ortho = FALSE,}
+
+\texttt{\hspace{1em} boot = TRUE)}
+
+---
+
+## IRF Point Estimates
+
+```{r}
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+impulses <- c("IP", "CPI", "FFR")
+responses <- c("IP", "CPI", "FFR")
+
+par(
+  mfrow = c(3, 3),
+  mar = c(1.3, 2.2, 1.2, 0.4),
+  oma = c(2.2, 4.2, 2.0, 0.2),
+  cex = 0.8
+)
+
+for (i in seq_along(impulses)) {
+
+  impulse <- impulses[i]
+
+  for (j in seq_along(responses)) {
+
+    response <- responses[j]
+
+    y <- irf_results$irf[[impulse]][, response]
+    horizon <- 0:(length(y) - 1)
+
+    plot(
+      horizon,
+      y,
+      type = "l",
+      ylim = range(c(y, 0)),
+      xlab = "",
+      ylab = "",
+      main = "",
+      axes = FALSE,
+      lwd = 1.2
+    )
+
+    abline(
+      h = 0,
+      lty = 2,
+      col = "grey40"
+    )
+
+    axis(
+      1,
+      cex.axis = 0.55
+    )
+
+    axis(
+      2,
+      cex.axis = 0.55
+    )
+
+    # Response labels
+    if (i == 1) {
+      mtext(
+        response,
+        side = 3,
+        line = 0.15,
+        font = 2,
+        cex = 0.7
+      )
+    }
+  }
+}
+
+# Impulse labels
+mtext(
+  "IP",
+  side = 2,
+  outer = TRUE,
+  at = 5 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "CPI",
+  side = 2,
+  outer = TRUE,
+  at = 3 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "FFR",
+  side = 2,
+  outer = TRUE,
+  at = 1 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+# Common labels
+mtext(
+  "Response",
+  side = 3,
+  outer = TRUE,
+  line = 0.9,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Impulse",
+  side = 2,
+  outer = TRUE,
+  line = 2.0,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Horizon (months)",
+  side = 1,
+  outer = TRUE,
+  line = 1.0,
+  cex = 0.75
+)
+
+par(mfrow = c(1, 1))
+```
+
+---
+
+## Responses to an IP Innovation{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Impulse: IP, $\Delta\log(INDPRO)$
+
+\vspace{0.4em}
+
+\small
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  IP — strongly positive on impact, followed by rapid decay and a small negative overshoot
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  CPI — alternating positive and negative movements that become progressively smaller
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  FFR — large positive short-run response followed by oscillations around zero
+
+\end{itemize}
+
+\vspace{0.4em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Most of the effect is concentrated at short horizons and eventually dies out
+
+---
+
+## Responses to a CPI Innovation{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Impulse: CPI, $\Delta^2\log(CPI)$
+
+\vspace{0.4em}
+
+\small
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  IP — initially positive, followed by a negative overshoot and gradual convergence toward zero
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  CPI — positive on impact, followed by a sharp negative correction and mean reversion
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  FFR — large short-run fluctuations that diminish over time
+
+\end{itemize}
+
+\vspace{0.4em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} The responses are again concentrated mainly in the first 15--20 months
+
+---
+
+## Responses to an FFR Innovation
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Impulse: FFR, $\Delta FFR$
+
+\vspace{0.4em}
+
+\small
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  IP — becomes negative after a few months and gradually returns toward zero
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  CPI — oscillates around zero with declining amplitude
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  FFR — positive on impact, followed by a reversal and damped oscillations
+
+\end{itemize}
+
+\vspace{0.4em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} The negative IP response is consistent with contractionary dynamics following a positive FFR innovation
+
+---
+
+## The Price Puzzle{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Bernanke et al. (2005) discuss the price puzzle
+
+\vspace{0.4em}
+
+\small
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  A contractionary monetary-policy shock is followed by an increase in the price level
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  The relevant relationship in our VAR is an FFR impulse and a CPI response
+
+\end{itemize}
+
+\vspace{0.5em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} CPI enters the VAR as $\Delta^2\log(CPI)$
+
+\vspace{0.3em}
+
+\small
+
+\begin{itemize}
+
+\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] The transformed CPI response therefore cannot by itself determine whether the price level rises
+
+\end{itemize}
+
+---
+
+## Bootstrap Confidence Intervals
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Point estimates do not show the sampling uncertainty surrounding the IRFs
+
+\vspace{0.4em}
+
+\textcolor{blue}{$\bullet$} With \texttt{boot = TRUE}, \texttt{irf()} uses a residual bootstrap
+
+\vspace{0.35em}
+
+\footnotesize
+
+\begin{enumerate}
+
+  \item Estimate the VAR and obtain its residuals
+
+  \item Resample centered residuals with replacement
+
+  \item Generate a bootstrap time series recursively from the estimated VAR
+
+  \item Re-estimate the VAR using the bootstrap sample
+
+  \item Recompute the IRFs
+
+  \item Repeat the procedure for all bootstrap replications
+
+\end{enumerate}
+
+---
+
+## Constructing the Confidence Interval{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Each bootstrap replication produces a new estimate of the IRF at every horizon
+
+\vspace{0.4em}
+
+\textcolor{blue}{$\bullet$} The \texttt{vars} package uses a standard percentile interval
+
+\vspace{0.4em}
+
+$$
+CI_h^{95\%}
+=
+\left[
+\widehat{\theta}^{*}_{h,0.025},
+\widehat{\theta}^{*}_{h,0.975}
+\right]
+$$
+
+\vspace{0.4em}
+
+\small
+\begin{itemize}
+
+\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] The lower and upper bounds are the 2.5th and 97.5th percentiles of the bootstrap IRF distribution at horizon $h$
+
+\end{itemize}
+
+\vspace{0.4em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Pointwise confidence intervals: uncertainty is assessed separately at each horizon
+
+---
+
+## IRFs with 95\% Bootstrap Bands
+
+```{r}
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+impulses <- c("IP", "CPI", "FFR")
+responses <- c("IP", "CPI", "FFR")
+
+par(
+  mfrow = c(3, 3),
+  mar = c(1.3, 2.2, 1.2, 0.4),
+  oma = c(2.2, 4.2, 2.0, 0.2),
+  cex = 0.8
+)
+
+for (i in seq_along(impulses)) {
+
+  impulse <- impulses[i]
+
+  for (j in seq_along(responses)) {
+
+    response <- responses[j]
+
+    point <- irf_results$irf[[impulse]][, response]
+    lower <- irf_results$Lower[[impulse]][, response]
+    upper <- irf_results$Upper[[impulse]][, response]
+
+    horizon <- 0:(length(point) - 1)
+
+    plot_range <- range(
+      c(lower, upper, point, 0)
+    )
+
+    # Empty plotting region
+    plot(
+      horizon,
+      point,
+      type = "n",
+      ylim = plot_range,
+      xlab = "",
+      ylab = "",
+      main = "",
+      axes = FALSE
+    )
+
+    # 95% bootstrap confidence interval
+    polygon(
+      c(horizon, rev(horizon)),
+      c(lower, rev(upper)),
+      col = adjustcolor(
+        "grey70",
+        alpha.f = 0.45
+      ),
+      border = NA
+    )
+
+    # Zero line
+    abline(
+      h = 0,
+      lty = 3,
+      col = "grey40"
+    )
+
+    # Point estimate
+    lines(
+      horizon,
+      point,
+      lwd = 1.2
+    )
+
+    axis(
+      1,
+      cex.axis = 0.55
+    )
+
+    axis(
+      2,
+      cex.axis = 0.55
+    )
+
+    # Response labels
+    if (i == 1) {
+      mtext(
+        response,
+        side = 3,
+        line = 0.15,
+        font = 2,
+        cex = 0.7
+      )
+    }
+  }
+}
+
+# Impulse labels
+mtext(
+  "IP",
+  side = 2,
+  outer = TRUE,
+  at = 5 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "CPI",
+  side = 2,
+  outer = TRUE,
+  at = 3 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "FFR",
+  side = 2,
+  outer = TRUE,
+  at = 1 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+# Common labels
+mtext(
+  "Response",
+  side = 3,
+  outer = TRUE,
+  line = 0.9,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Impulse",
+  side = 2,
+  outer = TRUE,
+  line = 2.0,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Horizon (months)",
+  side = 1,
+  outer = TRUE,
+  line = 1.0,
+  cex = 0.75
+)
+
+par(mfrow = c(1, 1))
+```
+
+---
+
+## Significance of the IRFs{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} A response is pointwise significant at the 5\% level when its 95\% confidence band excludes zero
+
+\vspace{0.3em}
+
+\small
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  The clearest evidence is concentrated in short-run own-responses
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Several cross-responses are imprecisely estimated and their bands include zero over much of the horizon
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Statistical significance generally weakens as the horizon increases
+
+\end{itemize}
+
+---
+
+## Recovering IRFs in Levels
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} The VAR is estimated using stationary transformations rather than the original levels
+
+\vspace{0.4em}
+
+\textcolor{blue}{$\bullet$} A response in first differences is converted to a level response by accumulating the IRF (Lütkepohl, 2005)
+
+\vspace{0.35em}
+
+\footnotesize
+\begin{itemize}
+
+\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] For industrial production:
+
+$$
+IRF_h^{\log(INDPRO)}
+=
+\sum_{s=0}^{h}
+IRF_s^{\Delta\log(INDPRO)}
+$$
+
+\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] For the federal funds rate:
+
+$$
+IRF_h^{FFR}
+=
+\sum_{s=0}^{h}
+IRF_s^{\Delta FFR}
+$$
+
+\end{itemize}
+
+---
+
+## Recovering the CPI Level Response {.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} CPI enters the VAR in second log differences $\Delta^2\log(CPI_t)$
+
+\textcolor{blue}{$\bullet$} Its response therefore requires two accumulations
+
+\vspace{0.3em}
+
+\footnotesize
+\begin{itemize}
+
+\item[] 1. Recover the inflation response:
+
+$$
+IRF_h^{\Delta\log(CPI)}
+=
+\sum_{s=0}^{h}
+IRF_s^{\Delta^2\log(CPI)}
+$$
+
+\item[] 2. Recover the log price-level response:
+
+$$
+IRF_h^{\log(CPI)}
+=
+\sum_{j=0}^{h}
+IRF_j^{\Delta\log(CPI)}
+$$
+
+\end{itemize}
+
+\vspace{0.3em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} The resulting CPI IRF describes the cumulative response of the log price level
+
+---
+
+## IRFs Reconstructed in Levels
+
+```{r}
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+impulses <- c("IP", "CPI", "FFR")
+responses <- c("IP", "CPI", "FFR")
+
+level_irfs <- list(
+  IP = irf_ip_levels,
+  CPI = irf_cpi_levels,
+  FFR = irf_ffr_levels
+)
+
+par(
+  mfrow = c(3, 3),
+  mar = c(1.3, 2.2, 1.2, 0.4),
+  oma = c(2.2, 4.2, 2.0, 0.2),
+  cex = 0.8
+)
+
+for (i in seq_along(impulses)) {
+
+  impulse <- impulses[i]
+
+  for (j in seq_along(responses)) {
+
+    response <- responses[j]
+
+    y <- level_irfs[[impulse]][[response]]
+    horizon <- level_irfs[[impulse]]$Horizon
+
+    plot(
+      horizon,
+      y,
+      type = "l",
+      ylim = range(c(y, 0)),
+      xlab = "",
+      ylab = "",
+      main = "",
+      axes = FALSE,
+      lwd = 1.2
+    )
+
+    abline(
+      h = 0,
+      lty = 2,
+      col = "grey40"
+    )
+
+    axis(
+      1,
+      cex.axis = 0.55
+    )
+
+    axis(
+      2,
+      cex.axis = 0.55
+    )
+
+    # Response labels
+    if (i == 1) {
+      mtext(
+        response,
+        side = 3,
+        line = 0.15,
+        font = 2,
+        cex = 0.7
+      )
+    }
+  }
+}
+
+# Impulse labels
+mtext(
+  "IP",
+  side = 2,
+  outer = TRUE,
+  at = 5 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "CPI",
+  side = 2,
+  outer = TRUE,
+  at = 3 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "FFR",
+  side = 2,
+  outer = TRUE,
+  at = 1 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+# Common labels
+mtext(
+  "Response",
+  side = 3,
+  outer = TRUE,
+  line = 0.9,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Impulse",
+  side = 2,
+  outer = TRUE,
+  line = 2.0,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Horizon (months)",
+  side = 1,
+  outer = TRUE,
+  line = 1.0,
+  cex = 0.75
+)
+
+par(mfrow = c(1, 1))
+```
+
+---
+
+## Interpretation of the Level Responses{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Accumulation changes the interpretation of the responses
+
+\vspace{0.4em}
+
+\footnotesize
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  An IP innovation produces persistent positive responses in industrial production and the CPI level
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  A CPI innovation produces persistent cumulative responses in all three level variables
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  An FFR innovation produces a persistent negative response in industrial production and a positive response in the CPI level
+
+\end{itemize}
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
+
+---
+
+## Interpretation of the Level Responses{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Accumulation changes the interpretation of the responses
+
+\vspace{0.4em}
+
+\footnotesize
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  An IP innovation produces persistent positive responses in industrial production and the CPI level
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  A CPI innovation produces persistent cumulative responses in all three level variables
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  An FFR innovation produces a persistent negative response in industrial production and a positive response in the CPI level
+
+\end{itemize}
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
+
+\vspace{0.45em}
+
+\textcolor{blue}{$\Rightarrow$} \underline{So, does the price puzzle occur?}
+
+---
+
+## Interpretation of the Level Responses{.t}
+
+\vspace{2em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Accumulation changes the interpretation of the responses
+
+\vspace{0.4em}
+
+\footnotesize
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  An IP innovation produces persistent positive responses in industrial production and the CPI level
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  A CPI innovation produces persistent cumulative responses in all three level variables
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  An FFR innovation produces a persistent negative response in industrial production and a positive response in the CPI level
+
+\end{itemize}
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
+
+\vspace{0.45em}
+
+\textcolor{blue}{$\Rightarrow$} \underline{So, does the price puzzle occur?} \quad \textbf{Yes and no.}
+
+---
+
+## Reduced Form and Structural Analysis
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Reduced-form IRFs describe responses to VAR forecast errors
+
+\vspace{0.4em}
+
+\textcolor{blue}{$\bullet$} These innovations are not automatically interpretable as specific economic shocks
+
+\vspace{0.2em}
+
+\footnotesize
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Reduced-form residuals may be contemporaneously correlated
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  A policy-rate innovation need not represent an exogenous monetary-policy shock
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Structural analysis requires additional identifying restrictions
+
+\end{itemize}
+
+\vspace{0.45em}
+
+\normalsize
+
+The present IRFs are informative about dynamic propagation, but causal structural interpretation requires an identified structural VAR
