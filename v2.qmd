@@ -1,0 +1,608 @@
+---
+title: "visual2"
+format: pdf
+editor: visual
+---
+
+### 0. Settings
+
+```{r}
+# install.packages(c("bootUR", "vars"))
+
+library(bootUR)
+library(vars)
+```
+
+### 1. Data preparation
+
+```{r}
+# Load the FRED-MD CSV
+raw <- read.csv("2026-rev-08-MD.csv", check.names = FALSE)
+
+# FRED-MD transformation codes for the selected variables
+fred_codes <- unlist(
+  raw[1, c("INDPRO", "CPIAUCSL", "FEDFUNDS")]
+)
+
+# Keep only the variables used in the case study
+dat <- raw[, c(
+  "sasdate",
+  "INDPRO",
+  "CPIAUCSL",
+  "FEDFUNDS"
+)]
+
+names(dat)[1] <- "Date"
+
+dat$Date <- as.Date(
+  dat$Date,
+  format = "%m/%d/%Y"
+)
+
+dat <- dat[
+  !is.na(dat$Date) &
+    dat$Date <= as.Date("2019-12-31"),
+]
+
+dat <- dat[order(dat$Date), ]
+
+fred_codes
+```
+
+### 2. Series transformation
+
+```{r}
+dat_transformed <- data.frame(
+  Date = dat$Date,
+
+  INDPRO = c(
+    NA,
+    diff(log(dat$INDPRO))
+  ),
+
+  CPIAUCSL = c(
+    NA,
+    NA,
+    diff(
+      log(dat$CPIAUCSL),
+      differences = 2
+    )
+  ),
+
+  FEDFUNDS = c(
+    NA,
+    diff(dat$FEDFUNDS)
+  )
+)
+
+# Common sample starts in March 1959
+dat_common <- dat[-c(1, 2), ]
+
+dat_transformed <- dat_transformed[
+  -c(1, 2),
+]
+
+common_start <- c(
+  as.integer(
+    format(dat_common$Date[1], "%Y")
+  ),
+  as.integer(
+    format(dat_common$Date[1], "%m")
+  )
+)
+
+# Original series
+levels_ts <- ts(
+  dat_common[, c(
+    "INDPRO",
+    "CPIAUCSL",
+    "FEDFUNDS"
+  )],
+  start = common_start,
+  frequency = 12
+)
+
+# Transformed series
+transformed_ts <- ts(
+  dat_transformed[, c(
+    "INDPRO",
+    "CPIAUCSL",
+    "FEDFUNDS"
+  )],
+  start = common_start,
+  frequency = 12
+)
+
+range(dat_transformed$Date)
+```
+
+### 3. Series in levels
+
+```{r}
+plot(
+  levels_ts[, "INDPRO"],
+  main = "Industrial Production",
+  xlab = "Year",
+  ylab = "Index"
+)
+```
+
+```{r}
+plot(
+  levels_ts[, "CPIAUCSL"],
+  main = "Consumer Price Index",
+  xlab = "Year",
+  ylab = "Index"
+)
+```
+
+```{r}
+plot(
+  levels_ts[, "FEDFUNDS"],
+  main = "Federal Funds Rate",
+  xlab = "Year",
+  ylab = "Percent"
+)
+```
+
+### 4. Transformed series
+
+```{r}
+plot(
+  transformed_ts[, "INDPRO"],
+  main = "Output Growth",
+  xlab = "Year",
+  ylab = expression(
+    Delta~log(INDPRO)
+  )
+)
+```
+
+```{r}
+plot(
+  transformed_ts[, "CPIAUCSL"],
+  main = "Change in Inflation",
+  xlab = "Year",
+  ylab = expression(
+    Delta^2~log(CPI)
+  )
+)
+```
+
+```{r}
+plot(
+  transformed_ts[, "FEDFUNDS"],
+  main = "Change in Policy Rate",
+  xlab = "Year",
+  ylab = expression(
+    Delta~FEDFUNDS
+  )
+)
+```
+
+### 5. Unit root testing 
+```{r}
+# Series considered for the VAR
+
+IP  <- log(dat$INDPRO)
+CPI <- log(dat$CPIAUCSL)
+FFR <- dat$FEDFUNDS
+
+# Bootstrap settings
+
+set.seed(123)
+B <- 4999
+
+
+# Trend specification
+
+IP_trend <- order_integration(
+  IP,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = B
+)
+
+CPI_trend <- order_integration(
+  CPI,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = B
+)
+
+FFR_trend <- order_integration(
+  FFR,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = B
+)
+
+trend_orders <- c(
+  IP  = unname(IP_trend$order_int),
+  CPI = unname(CPI_trend$order_int),
+  FFR = unname(FFR_trend$order_int)
+)
+
+
+# Intercept specification
+
+IP_intercept <- order_integration(
+  IP,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = B
+)
+
+CPI_intercept <- order_integration(
+  CPI,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = B
+)
+
+FFR_intercept <- order_integration(
+  FFR,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = B
+)
+
+intercept_orders <- c(
+  IP  = unname(IP_intercept$order_int),
+  CPI = unname(CPI_intercept$order_int),
+  FFR = unname(FFR_intercept$order_int)
+)
+
+
+# Compare deterministic specifications
+
+unit_root_table <- data.frame(
+  Series = c(
+    "IP",
+    "CPI",
+    "FFR"
+  ),
+
+  Trend = as.integer(
+    trend_orders
+  ),
+
+  Intercept = as.integer(
+    intercept_orders
+  ),
+
+  Different = (
+    trend_orders != intercept_orders
+  )
+)
+
+unit_root_table
+```
+
+### 6. Selected integration order
+
+```{r}
+# Selected deterministic specifications:
+# IP  -> trend
+# CPI -> trend
+# FFR -> intercept
+
+selected_integration_table <- data.frame(
+  Series = c(
+    "IP",
+    "CPI",
+    "FFR"
+  ),
+
+  Deterministic = c(
+    "Trend",
+    "Trend",
+    "Intercept"
+  ),
+
+  Integration_order = c(
+    trend_orders["IP"],
+    trend_orders["CPI"],
+    intercept_orders["FFR"]
+  )
+)
+
+selected_integration_table
+```
+
+### 7. VAR setup
+
+```{r}
+alpha <- 0.05
+
+Y <- data.frame(
+  Date = dat_transformed$Date,
+  IP   = dat_transformed$INDPRO,
+  CPI  = dat_transformed$CPIAUCSL,
+  FFR  = dat_transformed$FEDFUNDS
+)
+
+x <- as.matrix(
+  Y[, c(
+    "IP",
+    "CPI",
+    "FFR"
+  )]
+)
+
+stopifnot(
+  all(is.finite(x))
+)
+
+c(
+  observations = nrow(x),
+  variables = ncol(x)
+)
+```
+
+### 8. Lag order selection
+
+```{r}
+# Allow up to two years of monthly lags
+lag_max <- 24
+
+lag_selection <- VARselect(
+  x,
+  lag.max = lag_max,
+  type = "const"
+)
+
+lag_table <- data.frame(
+  Criterion = c(
+    "AIC",
+    "HQ",
+    "SC / BIC",
+    "FPE"
+  ),
+
+  Selected_lag = as.integer(c(
+    lag_selection$selection[["AIC(n)"]],
+    lag_selection$selection[["HQ(n)"]],
+    lag_selection$selection[["SC(n)"]],
+    lag_selection$selection[["FPE(n)"]]
+  ))
+)
+
+lag_criteria <- lag_selection$criteria
+
+p_aic <- as.integer(
+  lag_selection$selection[["AIC(n)"]]
+)
+
+p_bic <- as.integer(
+  lag_selection$selection[["SC(n)"]]
+)
+
+# Display selected lag orders
+lag_table
+```
+
+```{r}
+# Display criterion values for all candidate lags
+lag_criteria
+```
+
+### 9. Estimation VAR models
+
+```{r}
+fit_aic <- VAR(
+  x,
+  p = p_aic,
+  type = "const"
+)
+
+fit_bic <- VAR(
+  x,
+  p = p_bic,
+  type = "const"
+)
+
+c(
+  AIC_selected_lag = p_aic,
+  BIC_selected_lag = p_bic
+)
+```
+
+### 10. VAR stability
+
+```{r}
+roots_aic <- roots(
+  fit_aic,
+  modulus = TRUE
+)
+
+roots_bic <- roots(
+  fit_bic,
+  modulus = TRUE
+)
+
+stability_table <- data.frame(
+  Specification = c(
+    paste0(
+      "AIC VAR(",
+      p_aic,
+      ")"
+    ),
+    paste0(
+      "SC/BIC VAR(",
+      p_bic,
+      ")"
+    )
+  ),
+
+  Max_root = c(
+    max(roots_aic),
+    max(roots_bic)
+  ),
+
+  Stable = c(
+    all(roots_aic < 1),
+    all(roots_bic < 1)
+  )
+)
+
+stability_table
+```
+
+### 11. Residual diagnostics
+
+```{r}
+# Common two-year residual-autocorrelation horizon
+serial_horizon <- 24
+
+stopifnot(
+  p_aic < serial_horizon,
+  p_bic < serial_horizon
+)
+
+run_var_diagnostics <- function(
+  fit,
+  serial_horizon
+) {
+
+  root_moduli <- roots(
+    fit,
+    modulus = TRUE
+  )
+
+  serial_result <- serial.test(
+    fit,
+    lags.pt = serial_horizon,
+    type = "PT.adjusted"
+  )
+
+  arch_result <- arch.test(
+    fit
+  )
+
+  normality_result <- normality.test(
+    fit
+  )
+
+  list(
+    lag = fit$p,
+
+    roots = root_moduli,
+
+    stable = all(
+      root_moduli < 1
+    ),
+
+    max_root = max(
+      root_moduli
+    ),
+
+    serial_test = serial_result,
+
+    serial_p = as.numeric(
+      serial_result$serial$p.value
+    ),
+
+    arch_test = arch_result,
+
+    arch_p = as.numeric(
+      arch_result$arch.mul$p.value
+    ),
+
+    normality_test = normality_result,
+
+    normality_p = as.numeric(
+      normality_result$jb.mul$JB$p.value
+    )
+  )
+}
+
+diag_aic <- run_var_diagnostics(
+  fit_aic,
+  serial_horizon
+)
+
+diag_bic <- run_var_diagnostics(
+  fit_bic,
+  serial_horizon
+)
+```
+
+### 12. Diagnostic results
+
+```{r}
+diagnostic_table <- data.frame(
+  Criterion = c(
+    "AIC",
+    "SC / BIC"
+  ),
+
+  Selected_lag = c(
+    diag_aic$lag,
+    diag_bic$lag
+  ),
+
+  Stable = c(
+    diag_aic$stable,
+    diag_bic$stable
+  ),
+
+  Max_root = c(
+    diag_aic$max_root,
+    diag_bic$max_root
+  ),
+
+  Serial_p = c(
+    diag_aic$serial_p,
+    diag_bic$serial_p
+  ),
+
+  ARCH_p = c(
+    diag_aic$arch_p,
+    diag_bic$arch_p
+  ),
+
+  Normality_p = c(
+    diag_aic$normality_p,
+    diag_bic$normality_p
+  )
+)
+
+diagnostic_table$Serial_correlation <- ifelse(
+  diagnostic_table$Serial_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table$ARCH_effects <- ifelse(
+  diagnostic_table$ARCH_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table$Normality <- ifelse(
+  diagnostic_table$Normality_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table
+```
+
+```{r}
+# Serial correlation
+diag_aic$serial_test
+diag_bic$serial_test
+```
+
+```{r}
+# ARCH effects
+diag_aic$arch_test
+diag_bic$arch_test
+```
+
+```{r}
+# Residual normality
+diag_aic$normality_test
+diag_bic$normality_test
+```

@@ -1,0 +1,1060 @@
+---
+title: "Case Study 2 Part 1"
+format: beamer
+editor: visual
+execute: 
+  echo: true
+  warning: false
+  message: false
+---
+
+## Data Overview
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Data extracted from the Federal Reserve Economic Data (FRED)
+
+\textcolor{blue}{$\bullet$} Selected series:
+
+\footnotesize
+\begin{itemize}
+  \item[\raise0.15ex\hbox{\tiny$\circ$}]
+    \textbf{INDPRO:} Industrial Production (Total Index)
+
+  \item[\raise0.15ex\hbox{\tiny$\circ$}]
+    \textbf{CPIAUCSL:} Consumer Price Index (All Urban Consumers)
+
+  \item[\raise0.15ex\hbox{\tiny$\circ$}]
+    \textbf{FEDFUNDS:} Effective Federal Funds Rate
+\end{itemize}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Original sample: January 1959 -- December 2019
+
+\footnotesize
+\begin{itemize}
+  \item[\textcolor{blue}{$\rightarrow$}]
+  \textbf{Effective sample: March 1959 -- December 2019}
+  \quad \textit{(...Why?)}
+\end{itemize}
+
+\scriptsize
+
+```{r}
+#| echo: false
+#| output: false
+#| 
+# Load the FRED-MD CSV.
+raw <- read.csv("2026-rev-08-MD.csv", check.names = FALSE)
+
+# The first row contains the FRED-MD transformation codes.
+fred_codes <- unlist(
+  raw[1, c("INDPRO", "CPIAUCSL", "FEDFUNDS")]
+)
+
+# Keep only the variables needed for the case.
+dat <- raw[, c(
+  "sasdate",
+  "INDPRO",
+  "CPIAUCSL",
+  "FEDFUNDS"
+)]
+
+names(dat)[1] <- "Date"
+```
+
+```{r}
+#| echo: false
+#| output: false
+# Convert dates.
+dat$Date <- as.Date(
+  dat$Date,
+  format = "%m/%d/%Y"
+)
+
+# End the sample in December 2019.
+dat <- dat[
+  !is.na(dat$Date) &
+    dat$Date <= as.Date("2019-12-31"),
+]
+
+dat <- dat[order(dat$Date), ]
+```
+
+------------------------------------------------------------------------
+
+## Economic Interpretation
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} The three series capture distinct dimensions of aggregate economic activity
+
+\textcolor{blue}{$\bullet$} Following \textit{Bernanke (2005)}, they can be interpreted as:
+
+\footnotesize
+\begin{itemize}
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+    \textit{INDPRO} -- Industrial Production
+    $\rightarrow$ \textbf{Real activity / Output}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+    \textit{CPIAUCSL} -- Consumer Price Index
+    $\rightarrow$ \textbf{Prices / Inflation}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+    \textit{FEDFUNDS} -- Effective Federal Funds Rate
+    $\rightarrow$ \textbf{Monetary policy}
+\end{itemize}
+
+------------------------------------------------------------------------
+
+## Benchmark Transformations
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} \textit{McCracken and Ng (2016)} provide benchmark transformations intended to obtain stationary representations of the FRED-MD series:
+
+\footnotesize
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+
+\begin{tabular}{lll}
+Series & Transformation & Interpretation \\
+\hline
+\textit{INDPRO}
+& $\Delta \log(\textit{INDPRO}_t)$
+& Output growth \\
+
+\textit{CPIAUCSL}
+& $\Delta^2 \log(\textit{CPIAUCSL}_t)$
+& Change in inflation \\
+
+\textit{FEDFUNDS}
+& $\Delta \textit{FEDFUNDS}_t$
+& Change in the policy rate \\
+\end{tabular}
+
+\end{center}
+
+\vspace{1em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} These transformations are treated as benchmarks rather than assumptions
+
+------------------------------------------------------------------------
+
+## Series in Levels {.t}
+
+\vspace{1em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Before transforming the data, we inspect the original series over time
+
+```{r}
+#| output: false
+#| echo: false
+
+# FRED-MD transformations
+dat_transformed <- data.frame(
+  Date = dat$Date,
+
+  INDPRO = c(
+    NA,
+    diff(log(dat$INDPRO))
+  ),
+
+  CPIAUCSL = c(
+    NA, NA,
+    diff(
+      log(dat$CPIAUCSL),
+      differences = 2
+    )
+  ),
+
+  FEDFUNDS = c(
+    NA,
+    diff(dat$FEDFUNDS)
+  )
+)
+
+# CPI transformation loses two observations.
+# Use a common sample beginning in March 1959.
+dat_common <- dat[-c(1, 2), ]
+dat_transformed <- dat_transformed[-c(1, 2), ]
+
+common_start <- c(
+  as.integer(format(dat_common$Date[1], "%Y")),
+  as.integer(format(dat_common$Date[1], "%m"))
+)
+
+# Series in levels
+levels_ts <- ts(
+  dat_common[, c(
+    "INDPRO",
+    "CPIAUCSL",
+    "FEDFUNDS"
+  )],
+  start = common_start,
+  frequency = 12
+)
+
+# Series after logs but before differencing
+pre_diff_ts <- ts(
+  cbind(
+    log_INDPRO = log(dat_common$INDPRO),
+    log_CPIAUCSL = log(dat_common$CPIAUCSL),
+    FEDFUNDS = dat_common$FEDFUNDS
+  ),
+  start = common_start,
+  frequency = 12
+)
+
+# FRED-MD transformed series
+transformed_ts <- ts(
+  dat_transformed[, c(
+    "INDPRO",
+    "CPIAUCSL",
+    "FEDFUNDS"
+  )],
+  start = common_start,
+  frequency = 12
+)
+```
+
+------------------------------------------------------------------------
+
+## Series in Levels {.t}
+
+```{r}
+#| echo: false
+#| fig-show: hold
+
+plot(
+  levels_ts[, "INDPRO"],
+  main = "Industrial Production",
+  xlab = "Year",
+  ylab = "Index"
+)
+
+```
+
+------------------------------------------------------------------------
+
+## Series in Levels {.t}
+
+```{r}
+#| echo: false
+#| fig-show: hold
+
+plot(
+  levels_ts[, "CPIAUCSL"],
+  main = "Consumer Price Index",
+  xlab = "Year",
+  ylab = "Index"
+)
+
+```
+
+------------------------------------------------------------------------
+
+## Series in Levels {.t}
+
+```{r}
+#| echo: false
+#| fig-show: hold
+
+plot(
+  levels_ts[, "FEDFUNDS"],
+  main = "Federal Funds Rate",
+  xlab = "Year",
+  ylab = "Percent"
+)
+
+```
+
+------------------------------------------------------------------------
+
+## Series in Levels {.t}
+
+\vspace{1em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Before transforming the data, we inspect the original series over time
+
+\small
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textit{INDPRO} exhibits a pronounced long-run upward trend and cyclical fluctuations
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textit{CPIAUCSL} displays a strong and persistent upward trend
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textit{FEDFUNDS} shows persistent movements and substantial variation
+
+\end{itemize}
+
+\vspace{1em}
+
+\normalsize
+
+\textcolor{blue}{$\rightarrow$} The visual evidence suggests that stationarity cannot be assumed in levels
+
+------------------------------------------------------------------------
+
+## Transformed Series {.t}
+
+\vspace{1em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Now, we apply the FRED-MD benchmark transformations:
+
+\footnotesize
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  $\Delta \log(\textit{INDPRO}_t)$
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  $\Delta^2 \log(\textit{CPIAUCSL}_t)$
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  $\Delta \textit{FEDFUNDS}_t$
+
+\end{itemize}
+
+------------------------------------------------------------------------
+
+## Transformed Series
+
+```{r}
+#| echo: false
+#| fig-show: hold
+
+
+plot(
+  transformed_ts[, "INDPRO"],
+  main = "Output Growth",
+  xlab = "Year",
+  ylab = expression(Delta~log(INDPRO))
+)
+
+```
+
+------------------------------------------------------------------------
+
+## Transformed Series
+
+```{r}
+#| echo: false
+#| fig-show: hold
+
+plot(
+  transformed_ts[, "CPIAUCSL"],
+  main = "Change in Inflation",
+  xlab = "Year",
+  ylab = expression(Delta^2~log(CPI))
+)
+
+```
+
+------------------------------------------------------------------------
+
+## Transformed Series
+
+```{r}
+#| echo: false
+#| fig-show: hold
+
+plot(
+  transformed_ts[, "FEDFUNDS"],
+  main = "Change in Policy Rate",
+  xlab = "Year",
+  ylab = expression(Delta~FEDFUNDS)
+)
+```
+
+------------------------------------------------------------------------
+
+## Transformed Series {.t}
+
+\vspace{1em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Now, we apply the FRED-MD benchmark transformations:
+
+\footnotesize
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  $\Delta \log(\textit{INDPRO}_t)$
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  $\Delta^2 \log(\textit{CPIAUCSL}_t)$
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  $\Delta \textit{FEDFUNDS}_t$
+
+\end{itemize}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} The transformations substantially changes the persistence of the series \vspace{-0.5em} \small
+
+\begin{itemize}
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+    Less persistence and no obvious deterministic trend
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+    Consistent with stationarity, but visual inspection is not sufficient to establish it
+\end{itemize}
+
+\normalsize
+
+\textcolor{blue}{$\Rightarrow$} Still need to formally assess whether the transformed series are stationary
+
+------------------------------------------------------------------------
+
+```{r}
+#| echo: false
+
+
+library(vars)
+
+alpha <- 0.05
+
+Y <- data.frame(
+  Date = dat_transformed$Date,
+  IP   = dat_transformed$INDPRO,
+  CPI  = dat_transformed$CPIAUCSL,
+  FFR  = dat_transformed$FEDFUNDS
+)
+
+x <- as.matrix(
+  Y[, c("IP", "CPI", "FFR")]
+)
+
+stopifnot(all(is.finite(x)))
+
+
+# Lag-order selection
+
+# Allow up to two years of monthly lags
+lag_max <- 24
+
+lag_selection <- VARselect(
+  x,
+  lag.max = lag_max,
+  type = "const"
+)
+
+
+# Store selected lag under each information criterion
+lag_table <- data.frame(
+  Criterion = c(
+    "AIC",
+    "HQ",
+    "SC / BIC",
+    "FPE"
+  ),
+  Selected_lag = as.integer(c(
+    lag_selection$selection[["AIC(n)"]],
+    lag_selection$selection[["HQ(n)"]],
+    lag_selection$selection[["SC(n)"]],
+    lag_selection$selection[["FPE(n)"]]
+  ))
+)
+
+
+# Keep full criterion values
+lag_criteria <- lag_selection$criteria
+
+
+# Extract AIC- and BIC-selected lag orders
+
+p_aic <- as.integer(
+  lag_selection$selection[["AIC(n)"]]
+)
+
+p_bic <- as.integer(
+  lag_selection$selection[["SC(n)"]]
+)
+
+
+# Estimate AIC- and BIC-selected VARs
+
+fit_aic <- VAR(
+  x,
+  p = p_aic,
+  type = "const"
+)
+
+fit_bic <- VAR(
+  x,
+  p = p_bic,
+  type = "const"
+)
+
+
+# Residual serial-correlation horizon
+
+# The Portmanteau test horizon: 2 years
+
+serial_horizon <- 24
+
+
+# Diagnostic function
+
+run_var_diagnostics <- function(
+  fit,
+  serial_horizon
+) {
+
+  # VAR dynamic stability
+  root_moduli <- roots(
+    fit,
+    modulus = TRUE
+  )
+
+  # Residual serial correlation
+  serial_result <- serial.test(
+    fit,
+    lags.pt = serial_horizon,
+    type = "PT.adjusted"
+  )
+
+  # Conditional heteroskedasticity
+  arch_result <- arch.test(
+    fit
+  )
+
+  # Multivariate residual normality
+  normality_result <- normality.test(
+    fit
+  )
+
+  # Collect results
+  list(
+    lag = fit$p,
+
+    roots = root_moduli,
+
+    stable = all(root_moduli < 1),
+
+    max_root = max(root_moduli),
+
+    serial_test = serial_result,
+
+    serial_p = as.numeric(
+      serial_result$serial$p.value
+    ),
+
+    arch_test = arch_result,
+
+    arch_p = as.numeric(
+      arch_result$arch.mul$p.value
+    ),
+
+    normality_test = normality_result,
+
+    normality_p = as.numeric(
+      normality_result$jb.mul$JB$p.value
+    )
+  )
+}
+
+
+# Run diagnostics
+
+diag_aic <- run_var_diagnostics(
+  fit_aic,
+  serial_horizon
+)
+
+diag_bic <- run_var_diagnostics(
+  fit_bic,
+  serial_horizon
+)
+
+
+# Diagnostic comparison table
+
+diagnostic_table <- data.frame(
+  Criterion = c(
+    "AIC",
+    "SC / BIC"
+  ),
+
+  Selected_lag = c(
+    diag_aic$lag,
+    diag_bic$lag
+  ),
+
+  Stable = c(
+    diag_aic$stable,
+    diag_bic$stable
+  ),
+
+  Max_root = c(
+    diag_aic$max_root,
+    diag_bic$max_root
+  ),
+
+  Serial_p = c(
+    diag_aic$serial_p,
+    diag_bic$serial_p
+  ),
+
+  ARCH_p = c(
+    diag_aic$arch_p,
+    diag_bic$arch_p
+  ),
+
+  Normality_p = c(
+    diag_aic$normality_p,
+    diag_bic$normality_p
+  )
+)
+
+
+# Add diagnostic decisions for presentation
+
+diagnostic_table$Serial_correlation <- ifelse(
+  diagnostic_table$Serial_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table$ARCH_effects <- ifelse(
+  diagnostic_table$ARCH_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table$Normality <- ifelse(
+  diagnostic_table$Normality_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+# Formatting helpers for slides
+
+fmt_p <- function(p) {
+  if (p < 0.0001) {
+    "< 0.0001"
+  } else {
+    sprintf("%.4f", p)
+  }
+}
+
+test_decision <- function(p, alpha = 0.05) {
+  if (p < alpha) {
+    "Reject"
+  } else {
+    "Do not reject"
+  }
+}
+
+```
+
+## VAR Specification
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Define the vector of stationary variables as
+
+$$\mathbf{y}_t =
+\begin{bmatrix}
+\Delta \log(\mathit{INDPRO}_t) \\
+\Delta^2 \log(\mathit{CPIAUCSL}_t) \\
+\Delta \mathit{FEDFUNDS}_t
+\end{bmatrix}
+=
+\begin{bmatrix}
+IP_t \\
+CPI_t \\
+FFR_t
+\end{bmatrix}$$
+
+\textcolor{blue}{$\bullet$} Following \textit{Pfaff (2008)}, specify the reduced-form VAR($p$) as
+
+$$\mathbf{y}_t
+=
+\mathbf{c}
++
+A_1 \mathbf{y}_{t-1}
++\cdots+
+A_p \mathbf{y}_{t-p}
++
+\mathbf{u}_t$$
+
+------------------------------------------------------------------------
+
+## Lag Order Selection
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Common methods to determine the lag order given by \textit{Kilian and Lütkepohl (2017)} include:
+
+\vspace{0.4em}
+
+\footnotesize
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textbf{Top-down testing}: Start with many lags and remove the highest lag step by step if it adds little information
+  \begin{itemize}
+  \scriptsize
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Simple and directly tests lag relevance
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Depends on the starting order
+  \end{itemize}
+  \vspace{0.4em}
+
+  \footnotesize
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textbf{Bottom-up testing}: Start with few lags and add more only if they meaningfully improve the model
+  
+  \begin{itemize}
+  \scriptsize
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Favors parsimonious models
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} May stop too early and miss longer-run dynamics
+  \end{itemize}
+  \vspace{0.4em}
+
+  \footnotesize
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textbf{Forecast-based selection}: Choose the lag order with the best predictive performance
+  \begin{itemize}
+  \scriptsize
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Directly targets forecasting \quad
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Depends on horizon and evaluation sample
+  \end{itemize}
+
+\end{itemize}
+
+------------------------------------------------------------------------
+
+## Information Criteria
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} An alternative is to compare candidate VAR specifications using information criteria
+
+\vspace{0.4em}
+
+\footnotesize
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textbf{AIC} -- Comparatively weaker penalty for additional parameters
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textbf{HQ} -- Intermediate penalty for model complexity
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textbf{SC/BIC} -- Stronger penalty, generally favoring more parsimonious models
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textbf{FPE} -- Evaluates the estimated prediction error of competing specifications
+
+\end{itemize}
+
+\vspace{0.4em}
+
+\footnotesize
+
+\begin{itemize}
+
+\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Systematic comparison of fit and model complexity
+
+\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Different criteria may select different lag orders
+\end{itemize}
+
+------------------------------------------------------------------------
+
+## Lag Selection Results -- Information Criteria
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Lag orders are selected using \texttt{VARselect()} from the \texttt{vars} package, comparing AIC, HQ, SC/BIC and FPE:
+
+```{r}
+#| echo: false
+#| results: asis
+
+cat("\\footnotesize\n")
+cat("\\begin{center}\n")
+cat("\\renewcommand{\\arraystretch}{1.4}\n\n")
+
+cat("\\begin{tabular}{lc}\n")
+cat("Criterion & Selected lag \\\\\n")
+cat("\\hline\n")
+
+for (i in seq_len(nrow(lag_table))) {
+  cat(
+    lag_table$Criterion[i],
+    " & ",
+    lag_table$Selected_lag[i],
+    " \\\\\n",
+    sep = ""
+  )
+}
+
+cat("\\end{tabular}\n")
+cat("\\end{center}\n")
+
+```
+
+\vspace{0.5em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} AIC selects $p=14$, while SC/BIC selects $p=3$
+
+\quad\textcolor{blue}{$\Rightarrow$} These define the two candidate lag specifications
+
+------------------------------------------------------------------------
+
+## VAR Estimation
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Each candidate specification is estimated separately using \texttt{VAR()} from the \texttt{vars} package
+
+\vspace{0.5em}
+
+\footnotesize
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  AIC specification: VAR(14)
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  SC/BIC specification: VAR(3)
+
+\end{itemize}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} For each specification,
+
+$$\widehat{\mathbf{y}}_t
+=
+\widehat{\mathbf{c}}
++
+\widehat{A}_1\mathbf{y}_{t-1}
++\cdots+
+\widehat{A}_p\mathbf{y}_{t-p}$$
+
+\footnotesize
+
+\quad\textcolor{blue}{$\rightarrow$} Each matrix $\widehat{A}_j$ contains the estimated own- and cross-lag effects among output growth, changes in inflation, and changes in the policy rate.
+
+------------------------------------------------------------------------
+
+## Coefficient Interpretation
+
+\vspace{-1em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Each row of $\widehat{A}_j$ corresponds to one VAR equation, while each column measures the effect of a lagged system variable
+
+\vspace{0.5em}
+
+\footnotesize
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Diagonal coefficients capture own-lag persistence
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Off-diagonal coefficients capture cross-variable predictive effects
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Coefficients are interpreted conditional on the remaining variables and included lags
+
+\end{itemize}
+
+\normalsize
+
+\quad\textcolor{blue}{$\rightarrow$} The coefficients describe reduced-form dynamic relationships, not structural causal effects
+
+------------------------------------------------------------------------
+
+## VAR Stability
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Stability assessed using \texttt{roots()} from the \texttt{vars} package
+
+\vspace{0.4em}
+
+\textcolor{blue}{$\bullet$} A VAR is stable if all characteristic roots satisfy $|\lambda_i| < 1$
+
+\footnotesize
+
+```{r}
+#| echo: false
+#| results: asis
+
+stability_table <- data.frame(
+  Specification = c(
+    "AIC",
+    "SC / BIC"
+  ),
+  Max_root = c(
+    diag_aic$max_root,
+    diag_bic$max_root
+  )
+)
+
+stability_table$Max_root <- sprintf(
+  "%.3f",
+  stability_table$Max_root
+)
+
+cat("\\begin{center}\n")
+cat("\\renewcommand{\\arraystretch}{1.4}\n")
+
+cat("\\begin{tabular}{lc}\n")
+cat("Specification & Maximum root modulus \\\\\n")
+cat("\\hline\n")
+
+for (i in seq_len(nrow(stability_table))) {
+  cat(
+    stability_table$Specification[i], " & ",
+    stability_table$Max_root[i],
+    " \\\\\n",
+    sep = ""
+  )
+}
+
+cat("\\end{tabular}\n")
+cat("\\end{center}\n")
+
+```
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Both specifications satisfy the stability condition
+
+\footnotesize
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  AIC: maximum modulus $= 0.939$ -- dynamics are relatively persistent
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  SC/BIC: maximum modulus $= 0.665$ -- shocks decay more rapidly through the system
+
+\end{itemize}
+
+------------------------------------------------------------------------
+
+## Residual Diagnostics
+
+\small
+
+\textcolor{blue}{$\bullet$} Residual properties are assessed using \texttt{serial.test()}, \texttt{arch.test()} and \texttt{normality.test()} from the \texttt{vars} package \textit{(Pfaff, 2008)}
+
+\vspace{0.4em}
+
+\footnotesize
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textbf{Serial correlation:}
+  $H_0$ -- no residual serial correlation
+
+  \scriptsize
+  \begin{itemize}
+
+    \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]
+    AIC VAR(14): $p=0.0060$
+    $\rightarrow$ reject $H_0$
+
+    \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]
+    SC/BIC VAR(3): $p<0.0001$
+    $\rightarrow$ reject $H_0$
+
+  \end{itemize}
+
+  \scriptsize
+  \quad Residual dependence remains under both lag specifications
+
+  \vspace{0.35em}
+
+  \footnotesize
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \textbf{ARCH effects:}
+  $H_0$ -- no conditional heteroskedasticity
+
+  \scriptsize
+  \begin{itemize}
+
+    \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]
+    Both specifications: $p<0.0001$
+    $\rightarrow$ reject $H_0$
+
+  \end{itemize}
+
+  \scriptsize
+  \quad Residual variance is not constant over time
+
+  \vspace{0.35em}
+
+  \footnotesize
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  (\textbf{Normality:}
+  $H_0$ -- multivariate normality)
+
+  \scriptsize
+  \begin{itemize}
+
+    \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]
+    Both specifications: $p<0.0001$
+    $\rightarrow$ reject $H_0$
+
+  \end{itemize}
+
+  \scriptsize
+  \quad Normality is not required for VAR estimation; its rejection motivates
+  bootstrap-based inference for the subsequent IRFs
+
+\end{itemize}
+
+------------------------------------------------------------------------
+
+## Model Selection
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Neither specification fully eliminates residual serial correlation
+
+\vspace{0.5em}
+
+\textcolor{blue}{$\bullet$} The SC/BIC VAR(3) is more parsimonious, while the AIC VAR(14) allows for richer monthly dynamics
+
+\vspace{0.5em}
+
+\textcolor{blue}{$\bullet$} VAR(14) is retained as the model specification for the subsequent IRF analysis
+
+\vspace{0.25em}
+
+\scriptsize
+
+\begin{itemize}
+  \item[\textcolor{blue}{$\rightarrow$}]\textbf{Results should be interpreted cautiously given the remaining residual misspecification!}
+\end{itemize}
+
+------------------------------------------------------------------------
