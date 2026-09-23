@@ -24,7 +24,7 @@ fred_codes <- unlist(
   raw[1, c("INDPRO", "CPIAUCSL", "FEDFUNDS")]
 )
 
-# Keep only the variables used in the case study
+# Keep only the variables usassed in the case study
 dat <- raw[, c(
   "sasdate",
   "INDPRO",
