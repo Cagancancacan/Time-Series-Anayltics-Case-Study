@@ -82,7 +82,7 @@ dat <- dat[
 dat <- dat[order(dat$Date), ]
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Economic Interpretation
 
@@ -107,7 +107,7 @@ dat <- dat[order(dat$Date), ]
     $\rightarrow$ \textbf{Monetary policy}
 \end{itemize}
 
-------------------------------------------------------------------------
+---
 
 ## Benchmark Transformations
 
@@ -144,7 +144,7 @@ Series & Transformation & Interpretation \\
 
 \textcolor{blue}{$\bullet$} These transformations are treated as benchmarks rather than assumptions
 
-------------------------------------------------------------------------
+---
 
 ## Series in Levels {.t}
 
@@ -225,7 +225,7 @@ transformed_ts <- ts(
 )
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Series in Levels {.t}
 
@@ -242,7 +242,7 @@ plot(
 
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Series in Levels {.t}
 
@@ -259,7 +259,7 @@ plot(
 
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Series in Levels {.t}
 
@@ -276,7 +276,7 @@ plot(
 
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Series in Levels {.t}
 
@@ -307,7 +307,7 @@ plot(
 
 \textcolor{blue}{$\rightarrow$} The visual evidence suggests that stationarity cannot be assumed in levels
 
-------------------------------------------------------------------------
+---
 
 ## Transformed Series {.t}
 
@@ -331,7 +331,7 @@ plot(
 
 \end{itemize}
 
-------------------------------------------------------------------------
+---
 
 ## Transformed Series
 
@@ -349,7 +349,7 @@ plot(
 
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Transformed Series
 
@@ -366,7 +366,7 @@ plot(
 
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Transformed Series
 
@@ -382,7 +382,7 @@ plot(
 )
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Transformed Series {.t}
 
@@ -421,7 +421,7 @@ plot(
 
 \textcolor{blue}{$\Rightarrow$} Still need to formally assess whether the transformed series are stationary
 
-------------------------------------------------------------------------
+---
 
 ```{r}
 #| echo: false
@@ -671,7 +671,8 @@ test_decision <- function(p, alpha = 0.05) {
 
 \textcolor{blue}{$\bullet$} Define the vector of stationary variables as
 
-$$\mathbf{y}_t =
+$$
+\mathbf{y}_t =
 \begin{bmatrix}
 \Delta \log(\mathit{INDPRO}_t) \\
 \Delta^2 \log(\mathit{CPIAUCSL}_t) \\
@@ -682,11 +683,13 @@ $$\mathbf{y}_t =
 IP_t \\
 CPI_t \\
 FFR_t
-\end{bmatrix}$$
+\end{bmatrix}
+$$
 
 \textcolor{blue}{$\bullet$} Following \textit{Pfaff (2008)}, specify the reduced-form VAR($p$) as
 
-$$\mathbf{y}_t
+$$
+\mathbf{y}_t
 =
 \mathbf{c}
 +
@@ -694,9 +697,8 @@ A_1 \mathbf{y}_{t-1}
 +\cdots+
 A_p \mathbf{y}_{t-p}
 +
-\mathbf{u}_t$$
-
-------------------------------------------------------------------------
+\mathbf{u}_t
+$$
 
 ## Lag Order Selection
 
@@ -740,7 +742,7 @@ A_p \mathbf{y}_{t-p}
 
 \end{itemize}
 
-------------------------------------------------------------------------
+---
 
 ## Information Criteria
 
@@ -778,7 +780,7 @@ A_p \mathbf{y}_{t-p}
 \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Different criteria may select different lag orders
 \end{itemize}
 
-------------------------------------------------------------------------
+---
 
 ## Lag Selection Results -- Information Criteria
 
@@ -821,7 +823,7 @@ cat("\\end{center}\n")
 
 \quad\textcolor{blue}{$\Rightarrow$} These define the two candidate lag specifications
 
-------------------------------------------------------------------------
+---
 
 ## VAR Estimation
 
@@ -846,19 +848,21 @@ cat("\\end{center}\n")
 
 \textcolor{blue}{$\bullet$} For each specification,
 
-$$\widehat{\mathbf{y}}_t
+$$
+\widehat{\mathbf{y}}_t
 =
 \widehat{\mathbf{c}}
 +
 \widehat{A}_1\mathbf{y}_{t-1}
 +\cdots+
-\widehat{A}_p\mathbf{y}_{t-p}$$
+\widehat{A}_p\mathbf{y}_{t-p}
+$$
 
 \footnotesize
 
 \quad\textcolor{blue}{$\rightarrow$} Each matrix $\widehat{A}_j$ contains the estimated own- and cross-lag effects among output growth, changes in inflation, and changes in the policy rate.
 
-------------------------------------------------------------------------
+---
 
 ## Coefficient Interpretation
 
@@ -888,7 +892,7 @@ $$\widehat{\mathbf{y}}_t
 
 \quad\textcolor{blue}{$\rightarrow$} The coefficients describe reduced-form dynamic relationships, not structural causal effects
 
-------------------------------------------------------------------------
+---
 
 ## VAR Stability
 
@@ -959,7 +963,7 @@ cat("\\end{center}\n")
 
 \end{itemize}
 
-------------------------------------------------------------------------
+---
 
 ## Residual Diagnostics
 
@@ -1033,7 +1037,7 @@ cat("\\end{center}\n")
 
 \end{itemize}
 
-------------------------------------------------------------------------
+---
 
 ## Model Selection
 
@@ -1057,4 +1061,4 @@ cat("\\end{center}\n")
   \item[\textcolor{blue}{$\rightarrow$}]\textbf{Results should be interpreted cautiously given the remaining residual misspecification!}
 \end{itemize}
 
-------------------------------------------------------------------------
+---
