@@ -17,7 +17,7 @@ library(vars)
 
 ```{r}
 # Load the FRED-MD CSV
-raw <- read.csv("2026-rev-08-MD.csv", check.names = FALSE)
+raw <- read.csv("v2-2026-rev-08-MD.csv", check.names = FALSE)
 
 # FRED-MD transformation codes for the selected variables
 fred_codes <- unlist(
@@ -180,7 +180,8 @@ plot(
 )
 ```
 
-### 5. Unit root testing 
+### 5. Unit root testing
+
 ```{r}
 # Series considered for the VAR
 
