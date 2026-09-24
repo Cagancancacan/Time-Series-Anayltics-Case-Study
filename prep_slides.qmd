@@ -82,7 +82,7 @@ dat <- dat[
 dat <- dat[order(dat$Date), ]
 ```
 
----
+------------------------------------------------------------------------
 
 ## Economic Interpretation
 
@@ -107,7 +107,7 @@ dat <- dat[order(dat$Date), ]
     $\rightarrow$ \textbf{Monetary policy}
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## Benchmark Transformations
 
@@ -1089,13 +1089,13 @@ gc_FFR <- causality(
 
 # Collect the three block-test results
 granger_block_table <- data.frame(
-  Cause = c(
+  x = c(
     "CPI + FFR",
     "IP + FFR",
     "IP + CPI"
   ),
 
-  Response = c(
+  y = c(
     "IP",
     "CPI",
     "FFR"
@@ -1309,7 +1309,6 @@ granger_pairwise_slide$p_value <- format.pval(
 \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] For a some variable $x$,
 
 \end{itemize}
-
 
 $$H_0:
 \beta_{x,1}
