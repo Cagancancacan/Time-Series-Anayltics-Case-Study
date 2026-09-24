@@ -284,15 +284,15 @@ unit_root_table
 
 urip1 <- boot_adf(diff(diff(IP)), deterministics = "intercept", B = B)
 urip2 <- boot_adf(diff(IP), deterministics = "intercept", B = B)
-urip3 <- boot_adf(tip, deterministics = "trend", B = B)
+urip3 <- boot_adf(IP, deterministics = "trend", B = B)
 
 urcpi1 <- boot_adf(diff(diff(CPI)), deterministics = "intercept", B = B)
 urcpi2 <- boot_adf(diff(CPI), deterministics = "intercept", B = B)
-urcpi3 <- boot_adf(tcpi, deterministics = "trend", B = B)
+urcpi3 <- boot_adf(CPI, deterministics = "trend", B = B)
 
 urffr1 <- boot_adf(diff(diff(FFR)), deterministics = "intercept", B = B)
 urffr2 <- boot_adf(diff(FFR), deterministics = "intercept", B = B)
-urffr3 <- boot_adf(tffr, deterministics = "trend", B = B)
+urffr3 <- boot_adf(FFR, deterministics = "trend", B = B)
 
 unit_root_table_manual <- data.frame(
   Series = c(

@@ -144,7 +144,7 @@ Series & Transformation & Interpretation \\
 
 \textcolor{blue}{$\bullet$} These transformations are treated as benchmarks rather than assumptions
 
----
+------------------------------------------------------------------------
 
 ## Series in Levels {.t}
 
@@ -225,7 +225,7 @@ transformed_ts <- ts(
 )
 ```
 
----
+------------------------------------------------------------------------
 
 ## Series in Levels {.t}
 
@@ -242,7 +242,7 @@ plot(
 
 ```
 
----
+------------------------------------------------------------------------
 
 ## Series in Levels {.t}
 
@@ -259,7 +259,7 @@ plot(
 
 ```
 
----
+------------------------------------------------------------------------
 
 ## Series in Levels {.t}
 
@@ -276,7 +276,7 @@ plot(
 
 ```
 
----
+------------------------------------------------------------------------
 
 ## Series in Levels {.t}
 
@@ -307,7 +307,7 @@ plot(
 
 \textcolor{blue}{$\rightarrow$} The visual evidence suggests that stationarity cannot be assumed in levels
 
----
+------------------------------------------------------------------------
 
 ## Transformed Series {.t}
 
@@ -331,7 +331,7 @@ plot(
 
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## Transformed Series
 
@@ -349,7 +349,7 @@ plot(
 
 ```
 
----
+------------------------------------------------------------------------
 
 ## Transformed Series
 
@@ -366,7 +366,7 @@ plot(
 
 ```
 
----
+------------------------------------------------------------------------
 
 ## Transformed Series
 
@@ -382,7 +382,7 @@ plot(
 )
 ```
 
----
+------------------------------------------------------------------------
 
 ## Transformed Series {.t}
 
@@ -421,7 +421,7 @@ plot(
 
 \textcolor{blue}{$\Rightarrow$} Still need to formally assess whether the transformed series are stationary
 
----
+------------------------------------------------------------------------
 
 ```{r}
 #| echo: false
@@ -671,8 +671,7 @@ test_decision <- function(p, alpha = 0.05) {
 
 \textcolor{blue}{$\bullet$} Define the vector of stationary variables as
 
-$$
-\mathbf{y}_t =
+$$\mathbf{y}_t =
 \begin{bmatrix}
 \Delta \log(\mathit{INDPRO}_t) \\
 \Delta^2 \log(\mathit{CPIAUCSL}_t) \\
@@ -683,13 +682,11 @@ $$
 IP_t \\
 CPI_t \\
 FFR_t
-\end{bmatrix}
-$$
+\end{bmatrix}$$
 
 \textcolor{blue}{$\bullet$} Following \textit{Pfaff (2008)}, specify the reduced-form VAR($p$) as
 
-$$
-\mathbf{y}_t
+$$\mathbf{y}_t
 =
 \mathbf{c}
 +
@@ -697,8 +694,7 @@ A_1 \mathbf{y}_{t-1}
 +\cdots+
 A_p \mathbf{y}_{t-p}
 +
-\mathbf{u}_t
-$$
+\mathbf{u}_t$$
 
 ## Lag Order Selection
 
@@ -742,7 +738,7 @@ $$
 
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## Information Criteria
 
@@ -780,7 +776,7 @@ $$
 \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Different criteria may select different lag orders
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## Lag Selection Results -- Information Criteria
 
@@ -823,7 +819,7 @@ cat("\\end{center}\n")
 
 \quad\textcolor{blue}{$\Rightarrow$} These define the two candidate lag specifications
 
----
+------------------------------------------------------------------------
 
 ## VAR Estimation
 
@@ -848,21 +844,19 @@ cat("\\end{center}\n")
 
 \textcolor{blue}{$\bullet$} For each specification,
 
-$$
-\widehat{\mathbf{y}}_t
+$$\widehat{\mathbf{y}}_t
 =
 \widehat{\mathbf{c}}
 +
 \widehat{A}_1\mathbf{y}_{t-1}
 +\cdots+
-\widehat{A}_p\mathbf{y}_{t-p}
-$$
+\widehat{A}_p\mathbf{y}_{t-p}$$
 
 \footnotesize
 
 \quad\textcolor{blue}{$\rightarrow$} Each matrix $\widehat{A}_j$ contains the estimated own- and cross-lag effects among output growth, changes in inflation, and changes in the policy rate.
 
----
+------------------------------------------------------------------------
 
 ## Coefficient Interpretation
 
@@ -892,7 +886,7 @@ $$
 
 \quad\textcolor{blue}{$\rightarrow$} The coefficients describe reduced-form dynamic relationships, not structural causal effects
 
----
+------------------------------------------------------------------------
 
 ## VAR Stability
 
@@ -963,7 +957,7 @@ cat("\\end{center}\n")
 
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## Residual Diagnostics
 
@@ -1037,7 +1031,7 @@ cat("\\end{center}\n")
 
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## Model Selection
 
@@ -1061,7 +1055,7 @@ cat("\\end{center}\n")
   \item[\textcolor{blue}{$\rightarrow$}]\textbf{Results should be interpreted cautiously given the remaining residual misspecification!}
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ```{r}
 #| include: false
@@ -1316,28 +1310,24 @@ granger_pairwise_slide$p_value <- format.pval(
 
 \end{itemize}
 
-$$
-H_0:
+
+$$H_0:
 \beta_{x,1}
 =
 \cdots
 =
 \beta_{x,p}
 =
-0
-$$
+0$$
 
-$$
-H_1:
+$$H_1:
 \beta_{x,j}\neq0
 \quad
-\text{for at least one }j
-$$
+\text{for at least one }j$$
 
----
+------------------------------------------------------------------------
 
 ## Granger Causality
-
 
 \normalsize
 
@@ -1358,7 +1348,7 @@ knitr::kable(
 )
 ```
 
----
+------------------------------------------------------------------------
 
 ## Pairwise Granger Causality {.t}
 
@@ -1390,8 +1380,7 @@ knitr::kable(
 
 \textcolor{blue}{$\bullet$} The remaining VAR variable is retained, so these are conditional Granger-causality tests
 
----
-
+------------------------------------------------------------------------
 
 ```{r}
 #| include: false
@@ -1508,7 +1497,7 @@ irf_ffr_levels <- to_levels(
 
 ```
 
-## Impulse Response Functions{.t}
+## Impulse Response Functions {.t}
 
 \vspace{2em}
 
@@ -1533,9 +1522,9 @@ irf_ffr_levels <- to_levels(
 
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
-## IRF Implementation{.t}
+## IRF Implementation {.t}
 
 \vspace{2em}
 
@@ -1559,7 +1548,7 @@ irf_ffr_levels <- to_levels(
 
 \texttt{\hspace{1em} boot = TRUE)}
 
----
+------------------------------------------------------------------------
 
 ## IRF Point Estimates
 
@@ -1692,9 +1681,9 @@ mtext(
 par(mfrow = c(1, 1))
 ```
 
----
+------------------------------------------------------------------------
 
-## Responses to an IP Innovation{.t}
+## Responses to an IP Innovation {.t}
 
 \vspace{2em}
 
@@ -1725,9 +1714,9 @@ par(mfrow = c(1, 1))
 
 \textcolor{blue}{$\bullet$} Most of the effect is concentrated at short horizons and eventually dies out
 
----
+------------------------------------------------------------------------
 
-## Responses to a CPI Innovation{.t}
+## Responses to a CPI Innovation {.t}
 
 \vspace{2em}
 
@@ -1758,7 +1747,7 @@ par(mfrow = c(1, 1))
 
 \textcolor{blue}{$\bullet$} The responses are again concentrated mainly in the first 15--20 months
 
----
+------------------------------------------------------------------------
 
 ## Responses to an FFR Innovation
 
@@ -1789,9 +1778,9 @@ par(mfrow = c(1, 1))
 
 \textcolor{blue}{$\bullet$} The negative IP response is consistent with contractionary dynamics following a positive FFR innovation
 
----
+------------------------------------------------------------------------
 
-## The Price Puzzle{.t}
+## The Price Puzzle {.t}
 
 \vspace{2em}
 
@@ -1829,7 +1818,7 @@ par(mfrow = c(1, 1))
 
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## Bootstrap Confidence Intervals
 
@@ -1861,9 +1850,9 @@ par(mfrow = c(1, 1))
 
 \end{enumerate}
 
----
+------------------------------------------------------------------------
 
-## Constructing the Confidence Interval{.t}
+## Constructing the Confidence Interval {.t}
 
 \vspace{2em}
 
@@ -1877,14 +1866,12 @@ par(mfrow = c(1, 1))
 
 \vspace{0.4em}
 
-$$
-CI_h^{95\%}
+$$CI_h^{95\%}
 =
 \left[
 \widehat{\theta}^{*}_{h,0.025},
 \widehat{\theta}^{*}_{h,0.975}
-\right]
-$$
+\right]$$
 
 \vspace{0.4em}
 
@@ -1901,9 +1888,9 @@ $$
 
 \textcolor{blue}{$\bullet$} Pointwise confidence intervals: uncertainty is assessed separately at each horizon
 
----
+------------------------------------------------------------------------
 
-## IRFs with 95\% Bootstrap Bands
+## IRFs with 95% Bootstrap Bands
 
 ```{r}
 #| echo: false
@@ -2060,15 +2047,15 @@ mtext(
 par(mfrow = c(1, 1))
 ```
 
----
+------------------------------------------------------------------------
 
-## Significance of the IRFs{.t}
+## Significance of the IRFs {.t}
 
 \vspace{2em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} A response is pointwise significant at the 5\% level when its 95\% confidence band excludes zero
+\textcolor{blue}{$\bullet$} A response is pointwise significant at the 5% level when its 95% confidence band excludes zero
 
 \vspace{0.3em}
 
@@ -2087,7 +2074,7 @@ par(mfrow = c(1, 1))
 
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## Recovering IRFs in Levels
 
@@ -2124,7 +2111,7 @@ $$
 
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## Recovering the CPI Level Response {.t}
 
@@ -2167,7 +2154,7 @@ $$
 
 \textcolor{blue}{$\bullet$} The resulting CPI IRF describes the cumulative response of the log price level
 
----
+------------------------------------------------------------------------
 
 ## IRFs Reconstructed in Levels
 
@@ -2306,9 +2293,9 @@ mtext(
 par(mfrow = c(1, 1))
 ```
 
----
+------------------------------------------------------------------------
 
-## Interpretation of the Level Responses{.t}
+## Interpretation of the Level Responses {.t}
 
 \vspace{2em}
 
@@ -2339,9 +2326,9 @@ par(mfrow = c(1, 1))
 
 \textcolor{blue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
 
----
+------------------------------------------------------------------------
 
-## Interpretation of the Level Responses{.t}
+## Interpretation of the Level Responses {.t}
 
 \vspace{2em}
 
@@ -2376,9 +2363,9 @@ par(mfrow = c(1, 1))
 
 \textcolor{blue}{$\Rightarrow$} \underline{So, does the price puzzle occur?}
 
----
+------------------------------------------------------------------------
 
-## Interpretation of the Level Responses{.t}
+## Interpretation of the Level Responses {.t}
 
 \vspace{2em}
 
@@ -2413,7 +2400,7 @@ par(mfrow = c(1, 1))
 
 \textcolor{blue}{$\Rightarrow$} \underline{So, does the price puzzle occur?} \quad \textbf{Yes and no.}
 
----
+------------------------------------------------------------------------
 
 ## Reduced Form and Structural Analysis
 
