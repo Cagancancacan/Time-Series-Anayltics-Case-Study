@@ -1,0 +1,718 @@
+---
+title: "visual2"
+format: pdf
+editor: visual
+---
+
+### 0. Settings
+
+```{r}
+# install.packages(c("bootUR", "vars"))
+
+library(bootUR)
+library(vars)
+```
+
+### 1. Data preparation
+
+```{r}
+# Load the FRED-MD CSV
+raw <- read.csv("v2-2026-rev-08-MD.csv", check.names = FALSE)
+
+# FRED-MD transformation codes for the selected variables
+fred_codes <- unlist(
+  raw[1, c("INDPRO", "CPIAUCSL", "FEDFUNDS")]
+)
+
+# Keep only the variables used in the case study
+dat <- raw[, c(
+  "sasdate",
+  "INDPRO",
+  "CPIAUCSL",
+  "FEDFUNDS"
+)]
+
+names(dat)[1] <- "Date"
+
+dat$Date <- as.Date(
+  dat$Date,
+  format = "%m/%d/%Y"
+)
+
+dat <- dat[
+  !is.na(dat$Date) &
+    dat$Date <= as.Date("2019-12-31"),
+]
+
+dat <- dat[order(dat$Date), ]
+
+fred_codes
+```
+
+### 2. Series transformation
+
+```{r}
+dat_transformed <- data.frame(
+  Date = dat$Date,
+
+  INDPRO = c(
+    NA,
+    diff(log(dat$INDPRO))
+  ),
+
+  CPIAUCSL = c(
+    NA,
+    NA,
+    diff(
+      log(dat$CPIAUCSL),
+      differences = 2
+    )
+  ),
+
+  FEDFUNDS = c(
+    NA,
+    diff(dat$FEDFUNDS)
+  )
+)
+
+# Common sample starts in March 1959
+dat_common <- dat[-c(1, 2), ]
+
+dat_transformed <- dat_transformed[
+  -c(1, 2),
+]
+
+common_start <- c(
+  as.integer(
+    format(dat_common$Date[1], "%Y")
+  ),
+  as.integer(
+    format(dat_common$Date[1], "%m")
+  )
+)
+
+# Original series
+levels_ts <- ts(
+  dat_common[, c(
+    "INDPRO",
+    "CPIAUCSL",
+    "FEDFUNDS"
+  )],
+  start = common_start,
+  frequency = 12
+)
+
+# Transformed series
+transformed_ts <- ts(
+  dat_transformed[, c(
+    "INDPRO",
+    "CPIAUCSL",
+    "FEDFUNDS"
+  )],
+  start = common_start,
+  frequency = 12
+)
+
+range(dat_transformed$Date)
+```
+
+### 3. Series in levels
+
+```{r}
+plot(
+  levels_ts[, "INDPRO"],
+  main = "Industrial Production",
+  xlab = "Year",
+  ylab = "Index"
+)
+```
+
+```{r}
+plot(
+  levels_ts[, "CPIAUCSL"],
+  main = "Consumer Price Index",
+  xlab = "Year",
+  ylab = "Index"
+)
+```
+
+```{r}
+plot(
+  levels_ts[, "FEDFUNDS"],
+  main = "Federal Funds Rate",
+  xlab = "Year",
+  ylab = "Percent"
+)
+```
+
+### 4. Transformed series
+
+```{r}
+plot(
+  transformed_ts[, "INDPRO"],
+  main = "Output Growth",
+  xlab = "Year",
+  ylab = expression(
+    Delta~log(INDPRO)
+  )
+)
+```
+
+```{r}
+plot(
+  transformed_ts[, "CPIAUCSL"],
+  main = "Change in Inflation",
+  xlab = "Year",
+  ylab = expression(
+    Delta^2~log(CPI)
+  )
+)
+```
+
+```{r}
+plot(
+  transformed_ts[, "FEDFUNDS"],
+  main = "Change in Policy Rate",
+  xlab = "Year",
+  ylab = expression(
+    Delta~FEDFUNDS
+  )
+)
+```
+
+### 5. Unit root testing
+
+```{r}
+# Series considered for the VAR
+
+IP  <- log(dat$INDPRO)
+CPI <- log(dat$CPIAUCSL)
+FFR <- dat$FEDFUNDS
+
+# Bootstrap settings
+
+set.seed(123)
+B <- 4999
+
+
+# Trend specification
+
+IP_trend <- order_integration(
+  IP,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = B
+)
+
+CPI_trend <- order_integration(
+  CPI,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = B
+)
+
+FFR_trend <- order_integration(
+  FFR,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = B
+)
+
+trend_orders <- c(
+  IP  = unname(IP_trend$order_int),
+  CPI = unname(CPI_trend$order_int),
+  FFR = unname(FFR_trend$order_int)
+)
+
+
+# Intercept specification
+
+IP_intercept <- order_integration(
+  IP,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = B
+)
+
+CPI_intercept <- order_integration(
+  CPI,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = B
+)
+
+FFR_intercept <- order_integration(
+  FFR,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = B
+)
+
+intercept_orders <- c(
+  IP  = unname(IP_intercept$order_int),
+  CPI = unname(CPI_intercept$order_int),
+  FFR = unname(FFR_intercept$order_int)
+)
+
+
+# Compare deterministic specifications
+
+unit_root_table <- data.frame(
+  Series = c(
+    "IP",
+    "CPI",
+    "FFR"
+  ),
+
+  Trend = as.integer(
+    trend_orders
+  ),
+
+  Intercept = as.integer(
+    intercept_orders
+  ),
+
+  Different = (
+    trend_orders != intercept_orders
+  )
+)
+
+unit_root_table
+```
+
+### 6. Selected integration order
+
+```{r}
+# Selected deterministic specifications:
+# IP  -> trend
+# CPI -> trend
+# FFR -> intercept
+
+selected_integration_table <- data.frame(
+  Series = c(
+    "IP",
+    "CPI",
+    "FFR"
+  ),
+
+  Deterministic = c(
+    "Trend",
+    "Trend",
+    "Intercept"
+  ),
+
+  Integration_order = c(
+    trend_orders["IP"],
+    trend_orders["CPI"],
+    intercept_orders["FFR"]
+  )
+)
+
+selected_integration_table
+```
+
+### 7. VAR setup
+
+```{r}
+alpha <- 0.05
+
+Y <- data.frame(
+  Date = dat_transformed$Date,
+  IP   = dat_transformed$INDPRO,
+  CPI  = dat_transformed$CPIAUCSL,
+  FFR  = dat_transformed$FEDFUNDS
+)
+
+x <- as.matrix(
+  Y[, c(
+    "IP",
+    "CPI",
+    "FFR"
+  )]
+)
+
+stopifnot(
+  all(is.finite(x))
+)
+
+c(
+  observations = nrow(x),
+  variables = ncol(x)
+)
+```
+
+### 8. Lag order selection
+
+```{r}
+# Allow up to two years of monthly lags
+lag_max <- 24
+
+lag_selection <- VARselect(
+  x,
+  lag.max = lag_max,
+  type = "const"
+)
+
+lag_table <- data.frame(
+  Criterion = c(
+    "AIC",
+    "HQ",
+    "SC / BIC",
+    "FPE"
+  ),
+
+  Selected_lag = as.integer(c(
+    lag_selection$selection[["AIC(n)"]],
+    lag_selection$selection[["HQ(n)"]],
+    lag_selection$selection[["SC(n)"]],
+    lag_selection$selection[["FPE(n)"]]
+  ))
+)
+
+lag_criteria <- lag_selection$criteria
+
+p_aic <- as.integer(
+  lag_selection$selection[["AIC(n)"]]
+)
+
+p_bic <- as.integer(
+  lag_selection$selection[["SC(n)"]]
+)
+
+# Display selected lag orders
+lag_table
+```
+
+```{r}
+# Display criterion values for all candidate lags
+lag_criteria
+```
+
+### 9. Estimation VAR models
+
+```{r}
+fit_aic <- VAR(
+  x,
+  p = p_aic,
+  type = "const"
+)
+
+fit_bic <- VAR(
+  x,
+  p = p_bic,
+  type = "const"
+)
+
+c(
+  AIC_selected_lag = p_aic,
+  BIC_selected_lag = p_bic
+)
+```
+
+### 10. VAR stability
+
+```{r}
+roots_aic <- roots(
+  fit_aic,
+  modulus = TRUE
+)
+
+roots_bic <- roots(
+  fit_bic,
+  modulus = TRUE
+)
+
+stability_table <- data.frame(
+  Specification = c(
+    paste0(
+      "AIC VAR(",
+      p_aic,
+      ")"
+    ),
+    paste0(
+      "SC/BIC VAR(",
+      p_bic,
+      ")"
+    )
+  ),
+
+  Max_root = c(
+    max(roots_aic),
+    max(roots_bic)
+  ),
+
+  Stable = c(
+    all(roots_aic < 1),
+    all(roots_bic < 1)
+  )
+)
+
+stability_table
+```
+
+### 11. Residual diagnostics
+
+```{r}
+# Common two-year residual-autocorrelation horizon
+serial_horizon <- 24
+
+stopifnot(
+  p_aic < serial_horizon,
+  p_bic < serial_horizon
+)
+
+run_var_diagnostics <- function(
+  fit,
+  serial_horizon
+) {
+
+  root_moduli <- roots(
+    fit,
+    modulus = TRUE
+  )
+
+  serial_result <- serial.test(
+    fit,
+    lags.pt = serial_horizon,
+    type = "PT.adjusted"
+  )
+
+  arch_result <- arch.test(
+    fit
+  )
+
+  normality_result <- normality.test(
+    fit
+  )
+
+  list(
+    lag = fit$p,
+
+    roots = root_moduli,
+
+    stable = all(
+      root_moduli < 1
+    ),
+
+    max_root = max(
+      root_moduli
+    ),
+
+    serial_test = serial_result,
+
+    serial_p = as.numeric(
+      serial_result$serial$p.value
+    ),
+
+    arch_test = arch_result,
+
+    arch_p = as.numeric(
+      arch_result$arch.mul$p.value
+    ),
+
+    normality_test = normality_result,
+
+    normality_p = as.numeric(
+      normality_result$jb.mul$JB$p.value
+    )
+  )
+}
+
+diag_aic <- run_var_diagnostics(
+  fit_aic,
+  serial_horizon
+)
+
+diag_bic <- run_var_diagnostics(
+  fit_bic,
+  serial_horizon
+)
+```
+
+### 12. Diagnostic results
+
+```{r}
+diagnostic_table <- data.frame(
+  Criterion = c(
+    "AIC",
+    "SC / BIC"
+  ),
+
+  Selected_lag = c(
+    diag_aic$lag,
+    diag_bic$lag
+  ),
+
+  Stable = c(
+    diag_aic$stable,
+    diag_bic$stable
+  ),
+
+  Max_root = c(
+    diag_aic$max_root,
+    diag_bic$max_root
+  ),
+
+  Serial_p = c(
+    diag_aic$serial_p,
+    diag_bic$serial_p
+  ),
+
+  ARCH_p = c(
+    diag_aic$arch_p,
+    diag_bic$arch_p
+  ),
+
+  Normality_p = c(
+    diag_aic$normality_p,
+    diag_bic$normality_p
+  )
+)
+
+diagnostic_table$Serial_correlation <- ifelse(
+  diagnostic_table$Serial_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table$ARCH_effects <- ifelse(
+  diagnostic_table$ARCH_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table$Normality <- ifelse(
+  diagnostic_table$Normality_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table
+```
+
+```{r}
+# Serial correlation
+diag_aic$serial_test
+diag_bic$serial_test
+```
+
+```{r}
+# ARCH effects
+diag_aic$arch_test
+diag_bic$arch_test
+```
+
+```{r}
+# Residual normality
+diag_aic$normality_test
+diag_bic$normality_test
+```
+
+### 13. Granger Causality
+
+Granger causality is a statistical test that is used to determine whether past values of one variable (e.g. x) are useful for predicting the other variable (e.g. y). Granger causality does not imply causality, it only establishes that x is a useful indicator for y. In other words, x improves the forecast of y compared to only using past data of y.
+
+The vars package only allows us to test whether our selected variable Granger-causes all other variables in the system jointly. To isolate the individual bivariate tests we need to implement hypothesis tests ourselves.
+
+```{r}
+# Test Granger causality using the vars package.
+
+# 1. Does IP Granger-cause CPI and FFR jointly? 
+
+# H0: IP does not Granger-cause CPI and FFR jointly. 
+# H1: IP does Granger-cause at least one of them.
+
+causality(fit_aic, cause = "IP")
+causality(fit_bic, cause = "IP")
+
+# 2. Does CPI Granger-cause IP and FFR jointly.
+
+# H0: CPI does not Granger-cause IP and FFR jointly. 
+# H1: CPI does Granger-cause at least one of them.
+
+causality(fit_aic, cause = "CPI")
+causality(fit_bic, cause = "CPI")
+
+# 3. Does FFR Granger-cause IP and CPI jointly?
+
+# H0: FFR does not Granger-cause CPI and IP jointly. 
+# H1: FFR does Granger-cause at least one of them.
+
+causality(fit_aic, cause = "FFR")
+causality(fit_bic, cause = "FFR")
+```
+
+Conclusion:
+
+- IP significantly Granger-causes at least one of the remaining variables (CPI and FFR) in both AIC and BIC models: both p\<0.05 and therefore reject H0.
+
+- FFR significantly Granger-causes at least one of the remaining variables (CPI and IP) in both AIC and BIC models: both p\<0.05 and therefore reject H0.
+
+- CPI does not Granger-cause the remaining variables (FFR and IP) in either model: test fails to reject H0 because p\>0.05 in both AIC and BIC models.
+
+The null hypothesis for the Granger-causality test states that the coefficients for all lagged values of the cause are zero. Since we are dealing with a VAR model, where each equation is just a linear combination of lagged variables, we are dealing with a linear hypothesis test. Granger-causality requires testing the predictive power of all lags, therefore individual t-tests are not suitable. The Wald test is a good alternative since it can measure the overall distance between our coefficients and the null values in a single metric. Additionally, it requires only the variance-covariance matrix and parameter estimates of the estimated model without re-estimating a new model.
+
+We use the car() package. This package includes the linearHypothesis() function which extracts the estimated coefficients and variance-covariance matrix of our VAR components, and computes the Wald test.
+
+Instead of stating the hypotheses for each test, we state the general null hypothesis and alternative hypothesis.
+
+H0: x does not Granger-cause y (all coefficients are zero)\
+H1: x does Granger-cause y.
+
+```{r}
+# Load the 'car' package to get the linearHypothesis() function
+install.packages("car")
+library(car)
+
+# We define a reusable function to run the bivariate Wald test.
+# var_model: The fitted VAR object (in this case, we take fit_aic)
+# cause: the predictor variable name (e.g., "IP")
+# effect: the response variable name (e.g., "CPI")
+# p: The lag order selected for the VAR model (p_aic)
+run_bivariate_granger <- function(var_model, cause, effect, p) {
+  
+  # If cause is "IP" and p is 3, 1:p creates the sequence 1, 2, 3.
+  # paste0 concatenates them, resulting in a vector: c("IP.l1", "IP.l2", "IP.l3").
+  lag_names <- paste0(cause, ".l", 1:p)
+  
+  # Null hypothesis: all coefficients are zero.  
+  # This appends " = 0" to each lag name.
+  # Resulting vector: c("IP.l1 = 0", "IP.l2 = 0", "IP.l3 = 0").
+  hypotheses <- paste0(lag_names, " = 0")
+  
+  
+  # A VAR model is just a list of individual regressions.
+  # var_model$varresult is that list; [[effect]] pulls out the specific lm object for the target variable.
+  target_equation <- var_model$varresult[[effect]]
+  
+  cat("\n--- Testing: Does", cause, "Granger-cause", effect, "? ---\n")
+  
+  # Execute the Wald test using the car package.
+  # It takes the isolated equations and tests whether forcing the variables 
+  # defined in 'hypotheses' to zero significantly damages the model fit.
+  test_output <- linearHypothesis(target_equation, hypotheses)
+  
+  # Output the resulting F-statistic and p-value table to the console.
+  print(test_output)
+}
+
+# Execute the 6 specific bivariate tests using the function.
+# p_aic ensures we use the exact lag length that the AIC algorithm selected.
+run_bivariate_granger(fit_aic, cause = "IP", effect = "CPI", p = p_aic)
+run_bivariate_granger(fit_aic, cause = "IP", effect = "FFR", p = p_aic)
+
+run_bivariate_granger(fit_aic, cause = "CPI", effect = "IP", p = p_aic)
+run_bivariate_granger(fit_aic, cause = "CPI", effect = "FFR", p = p_aic)
+
+run_bivariate_granger(fit_aic, cause = "FFR", effect = "IP", p = p_aic)
+run_bivariate_granger(fit_aic, cause = "FFR", effect = "CPI", p = p_aic)
+```
+
+IP –\> CPI: p\>0.05, therefore accept H0. IP does not help predict future CPI.\
+IP –\> FFR: p\<0.05, therefore reject H0. IP helps predicting future FFR.\
+FFR –\> CPI: p\<0.05, therefore reject H0. FFR helps predicting future CPI.\
+FFR –\> IP: p\>0.05, therefore accept H0. FFR does not help predict future IP.\
+CPI –\> IP: p\>0.05, therefore accept H0. CPI does not help predict future IP.\
+CPI –\> FFR: p\>0.05, therefore accept H0. CPI does not help predict future FFR.\
+\
+Industrial production (IP) helps predict future federal fund rates (FFR). Fund rates impact future price levels (CPI).
