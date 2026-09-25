@@ -660,40 +660,42 @@ H0: x does not Granger-cause y (all coefficients are zero)\
 H1: x does Granger-cause y.
 
 ```{r}
+# AI assistance was used here for coding. It helped to set up the test and provided code lines. Output was carefully assessed and understanding was made sure.
+
 # Load the 'car' package to get the linearHypothesis() function
 install.packages("car")
 library(car)
 
-# We define a reusable function to run the bivariate Wald test.
-# var_model: The fitted VAR object (in this case, we take fit_aic)
+# We define a reusable function to run the Wald test.
+# var_model: The fitted VAR object (in this case we take fit_aic)
 # cause: the predictor variable name (e.g., "IP")
 # effect: the response variable name (e.g., "CPI")
-# p: The lag order selected for the VAR model (p_aic)
+# p: The lag order selected for the VAR model (fit_aic --> p_aic)
 run_bivariate_granger <- function(var_model, cause, effect, p) {
   
-  # If cause is "IP" and p is 3, 1:p creates the sequence 1, 2, 3.
-  # paste0 concatenates them, resulting in a vector: c("IP.l1", "IP.l2", "IP.l3").
-  lag_names <- paste0(cause, ".l", 1:p)
+# If cause is "IP" and p is 3, 1:p creates the sequence 1, 2, 3.
+# paste0 concatenates them, resulting in a vector: c("IP.l1", "IP.l2", "IP.l3").
+lag_names <- paste0(cause, ".l", 1:p)
   
-  # Null hypothesis: all coefficients are zero.  
-  # This appends " = 0" to each lag name.
-  # Resulting vector: c("IP.l1 = 0", "IP.l2 = 0", "IP.l3 = 0").
-  hypotheses <- paste0(lag_names, " = 0")
+# H0: all coefficients are zero (H1: at least one of the coefficients is not zero). 
+# This appends " = 0" to each lag name.
+# Resulting vector: c("IP.l1 = 0", "IP.l2 = 0", "IP.l3 = 0").
+hypotheses <- paste0(lag_names, " = 0")
   
   
-  # A VAR model is just a list of individual regressions.
-  # var_model$varresult is that list; [[effect]] pulls out the specific lm object for the target variable.
-  target_equation <- var_model$varresult[[effect]]
+# A VAR model is just a list of individual regressions.
+# var_model$varresult is that list; [[effect]] pulls out the specific lm object for the target variable.
+target_equation <- var_model$varresult[[effect]]
+ 
+cat("\n--- Testing: Does", cause, "Granger-cause", effect, "? ---\n")
   
-  cat("\n--- Testing: Does", cause, "Granger-cause", effect, "? ---\n")
+# Execute the Wald test using the car package.
+# It takes the isolated equations and tests whether forcing the variables 
+# defined in 'hypotheses' to zero significantly damages the model fit.
+test_output <- linearHypothesis(target_equation, hypotheses)
   
-  # Execute the Wald test using the car package.
-  # It takes the isolated equations and tests whether forcing the variables 
-  # defined in 'hypotheses' to zero significantly damages the model fit.
-  test_output <- linearHypothesis(target_equation, hypotheses)
-  
-  # Output the resulting F-statistic and p-value table to the console.
-  print(test_output)
+# Output the results
+print(test_output)
 }
 
 # Execute the 6 specific bivariate tests using the function.
