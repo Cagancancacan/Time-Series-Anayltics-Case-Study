@@ -424,6 +424,322 @@ plot(
 ------------------------------------------------------------------------
 
 ```{r}
+#| include: false
+
+# Unit root testing
+
+library(bootUR)
+
+IP  <- log(dat$INDPRO)
+CPI <- log(dat$CPIAUCSL)
+FFR <- dat$FEDFUNDS
+
+set.seed(123)
+B <- 4999
+alpha <- 0.05
+
+
+# Automatic order of integration
+
+IP_trend <- order_integration(
+  IP,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = B
+)
+
+CPI_trend <- order_integration(
+  CPI,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = B
+)
+
+FFR_trend <- order_integration(
+  FFR,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = B
+)
+
+
+IP_intercept <- order_integration(
+  IP,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = B
+)
+
+CPI_intercept <- order_integration(
+  CPI,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = B
+)
+
+FFR_intercept <- order_integration(
+  FFR,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = B
+)
+
+
+# Compare deterministic specifications
+
+unit_root_table <- data.frame(
+  Series = c("IP", "CPI", "FFR"),
+
+  Trend = c(
+    IP_trend$order_int,
+    CPI_trend$order_int,
+    FFR_trend$order_int
+  ),
+
+  Intercept = c(
+    IP_intercept$order_int,
+    CPI_intercept$order_int,
+    FFR_intercept$order_int
+  )
+)
+
+
+
+# Manual bootstrap ADF tests
+
+# IP
+ur_IP_0 <- boot_adf(
+  IP,
+  deterministics = "trend",
+  B = B
+)
+
+ur_IP_1 <- boot_adf(
+  diff(IP),
+  deterministics = "intercept",
+  B = B
+)
+
+ur_IP_2 <- boot_adf(
+  diff(diff(IP)),
+  deterministics = "intercept",
+  B = B
+)
+
+
+# CPI
+ur_CPI_0 <- boot_adf(
+  CPI,
+  deterministics = "trend",
+  B = B
+)
+
+ur_CPI_1 <- boot_adf(
+  diff(CPI),
+  deterministics = "intercept",
+  B = B
+)
+
+ur_CPI_2 <- boot_adf(
+  diff(diff(CPI)),
+  deterministics = "intercept",
+  B = B
+)
+
+
+# FFR
+ur_FFR_0 <- boot_adf(
+  FFR,
+  deterministics = "trend",
+  B = B
+)
+
+ur_FFR_1 <- boot_adf(
+  diff(FFR),
+  deterministics = "intercept",
+  B = B
+)
+
+ur_FFR_2 <- boot_adf(
+  diff(diff(FFR)),
+  deterministics = "intercept",
+  B = B
+)
+
+
+# Manual results
+
+unit_root_table_manual <- data.frame(
+  Series = c("IP", "CPI", "FFR"),
+
+  Level = c(
+    ur_IP_0$p.value,
+    ur_CPI_0$p.value,
+    ur_FFR_0$p.value
+  ),
+
+  Delta_1 = c(
+    ur_IP_1$p.value,
+    ur_CPI_1$p.value,
+    ur_FFR_1$p.value
+  ),
+
+  Delta_2 = c(
+    ur_IP_2$p.value,
+    ur_CPI_2$p.value,
+    ur_FFR_2$p.value
+  )
+)
+
+
+# Infer order of integration from manual tests
+
+unit_root_table_manual$Order <- ifelse(
+  unit_root_table_manual$Level < alpha,
+  0,
+  ifelse(
+    unit_root_table_manual$Delta_1 < alpha,
+    1,
+    2
+  )
+)
+
+
+
+# Tables for slides
+
+unit_root_order_slide <- unit_root_table
+
+unit_root_manual_slide <- unit_root_table_manual
+
+unit_root_manual_slide$Level <- format.pval(
+  unit_root_manual_slide$Level,
+  digits = 3,
+  eps = 0.001
+)
+
+unit_root_manual_slide$Delta_1 <- format.pval(
+  unit_root_manual_slide$Delta_1,
+  digits = 3,
+  eps = 0.001
+)
+
+unit_root_manual_slide$Delta_2 <- format.pval(
+  unit_root_manual_slide$Delta_2,
+  digits = 3,
+  eps = 0.001
+)
+```
+
+## Unit Root Testing {.t}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Test whether the level series contain unit roots using bootstrap ADF tests
+
+\vspace{0.35em}
+
+\footnotesize
+
+$$
+H_0:\text{unit root}
+\qquad
+H_1:\text{stationary}
+$$
+
+\vspace{0.35em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Results are compared under trend and intercept specifications
+
+\vspace{0.3em}
+
+\scriptsize
+
+```{r}
+#| echo: false
+#| results: asis
+
+knitr::kable(
+  unit_root_order_slide,
+  row.names = FALSE,
+  align = "c"
+)
+```
+
+---
+
+## Unit Root Results {.t}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} Verify the order of integration by testing levels and successive differences
+
+\vspace{0.3em}
+
+\scriptsize
+
+```{r}
+#| echo: false
+#| results: asis
+
+knitr::kable(
+  unit_root_manual_slide,
+  row.names = FALSE,
+  align = "c"
+)
+```
+
+\vspace{0.35em}
+
+\footnotesize
+
+$p<0.05$ rejects the unit-root null
+
+\vspace{0.35em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} These results guide the stationary transformations used in the VAR
+
+---
+
+## CPI: I(1) or I(2)? {.t}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} CPI gives different integration orders across deterministic specifications
+
+\vspace{0.35em}
+
+\footnotesize
+
+\begin{itemize}
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Trend: $I($`r CPI_trend$order_int`$)$
+
+  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  Intercept: $I($`r CPI_intercept$order_int`$)$
+
+\end{itemize}
+
+\vspace{0.35em}
+
+\normalsize
+
+\textcolor{blue}{$\bullet$} The evidence is therefore specification-sensitive
+
+\vspace{0.3em}
+
+\footnotesize
+
+We retain the FRED-MD benchmark transformation $\Delta^2\log(CPI)$ for the VAR
+
+---
+
+```{r}
 #| echo: false
 
 
