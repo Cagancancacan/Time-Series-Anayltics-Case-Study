@@ -1,20 +1,119 @@
 ---
-title: "Case Study 2 Part 1"
-format: beamer
+title: "Case 2: Structural Vector AutoRegressive Models, Local Projections and Macro-economic Policy Analysis"
+subtitle: "EBC4008 -- Time Series Analytics"
+author:
+  - "Çan Idil"
+  - "Sem Huizinga"
+  - "Juan Diego Gaviño"
+format:
+  beamer:
+    slide-level: 2
+    header-includes:
+      - |
+        \definecolor{navyblue}{RGB}{10,32,72}
+
+        \setbeamertemplate{navigation symbols}{}
+
+        % Main presentation colors
+        \setbeamercolor{normal text}{fg=navyblue,bg=white}
+        \setbeamercolor{frametitle}{fg=navyblue}
+        \setbeamercolor{structure}{fg=navyblue}
+
+        % Header/footer colors
+        \setbeamercolor{headlinebar}{bg=navyblue,fg=white}
+        \setbeamercolor{footlinebar}{bg=navyblue,fg=white}
+
+        % Header
+        \setbeamertemplate{headline}{
+          \leavevmode
+          \begin{beamercolorbox}[
+            wd=\paperwidth,
+            ht=3.5ex,
+            dp=1.0ex
+          ]{headlinebar}
+
+            \hbox to \paperwidth{%
+
+              % Left: current section
+              \rlap{%
+                \hspace{1em}
+                \scriptsize \insertsectionhead
+              }%
+
+              \hfill
+
+              % Right
+              \llap{%
+                \scriptsize Case 2
+                \hspace{1em}
+              }%
+            }
+
+          \end{beamercolorbox}
+        }
+
+        % Footer
+        \setbeamertemplate{footline}{
+          \leavevmode
+          \begin{beamercolorbox}[
+            wd=\paperwidth,
+            ht=2.8ex,
+            dp=1.0ex
+          ]{footlinebar}
+
+            \hbox to \paperwidth{%
+
+              % Left
+              \rlap{%
+                \hspace{1em}
+                \tiny Maastricht University
+              }%
+
+              \hfill
+
+              % Exact center
+              \tiny EBC4008 -- Time Series Analytics
+
+              \hfill
+
+              % Right
+              \llap{%
+                \tiny \insertframenumber{} / \inserttotalframenumber
+                \hspace{1em}
+              }%
+            }
+
+          \end{beamercolorbox}
+        }
 editor: visual
-execute: 
+execute:
   echo: true
   warning: false
   message: false
 ---
 
-## Data Overview
+## Table of Contents {.t}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Data extracted from the Federal Reserve Economic Data (FRED)
+\begin{enumerate}
+  \item Data Exploration
+  \item Unit Root Testing
+  \item VAR Specification and Model Selection
+  \item Granger Causality
+  \item Impulse Response Functions
+\end{enumerate}
 
-\textcolor{blue}{$\bullet$} Selected series:
+---
+
+# Data Exploration
+## Overview
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Data extracted from the Federal Reserve Economic Data (FRED)
+
+\textcolor{navyblue}{$\bullet$} Selected series:
 
 \footnotesize
 \begin{itemize}
@@ -30,11 +129,11 @@ execute:
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Original sample: January 1959 -- December 2019
+\textcolor{navyblue}{$\bullet$} Original sample: January 1959 -- December 2019
 
 \footnotesize
 \begin{itemize}
-  \item[\textcolor{blue}{$\rightarrow$}]
+  \item[\textcolor{navyblue}{$\rightarrow$}]
   \textbf{Effective sample: March 1959 -- December 2019}
   \quad \textit{(...Why?)}
 \end{itemize}
@@ -88,21 +187,21 @@ dat <- dat[order(dat$Date), ]
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} The three series capture distinct dimensions of aggregate economic activity
+\textcolor{navyblue}{$\bullet$} The three series capture distinct dimensions of aggregate economic activity
 
-\textcolor{blue}{$\bullet$} Following \textit{Bernanke (2005)}, they can be interpreted as:
+\textcolor{navyblue}{$\bullet$} Following \textit{Bernanke (2005)}, they can be interpreted as:
 
 \footnotesize
 \begin{itemize}
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
     \textit{INDPRO} -- Industrial Production
     $\rightarrow$ \textbf{Real activity / Output}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
     \textit{CPIAUCSL} -- Consumer Price Index
     $\rightarrow$ \textbf{Prices / Inflation}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
     \textit{FEDFUNDS} -- Effective Federal Funds Rate
     $\rightarrow$ \textbf{Monetary policy}
 \end{itemize}
@@ -113,7 +212,7 @@ dat <- dat[order(dat$Date), ]
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} \textit{McCracken and Ng (2016)} provide benchmark transformations intended to obtain stationary representations of the FRED-MD series:
+\textcolor{navyblue}{$\bullet$} \textit{McCracken and Ng (2016)} provide benchmark transformations intended to obtain stationary representations of the FRED-MD series:
 
 \footnotesize
 
@@ -142,7 +241,7 @@ Series & Transformation & Interpretation \\
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} These transformations are treated as benchmarks rather than assumptions
+\textcolor{navyblue}{$\bullet$} These transformations are treated as benchmarks rather than assumptions
 
 ------------------------------------------------------------------------
 
@@ -152,7 +251,7 @@ Series & Transformation & Interpretation \\
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Before transforming the data, we inspect the original series over time
+\textcolor{navyblue}{$\bullet$} Before transforming the data, we inspect the original series over time
 
 ```{r}
 #| output: false
@@ -284,19 +383,19 @@ plot(
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Before transforming the data, we inspect the original series over time
+\textcolor{navyblue}{$\bullet$} Before transforming the data, we inspect the original series over time
 
 \small
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textit{INDPRO} exhibits a pronounced long-run upward trend and cyclical fluctuations
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textit{CPIAUCSL} displays a strong and persistent upward trend
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textit{FEDFUNDS} shows persistent movements and substantial variation
 
 \end{itemize}
@@ -305,7 +404,7 @@ plot(
 
 \normalsize
 
-\textcolor{blue}{$\rightarrow$} The visual evidence suggests that stationarity cannot be assumed in levels
+\textcolor{navyblue}{$\rightarrow$} The visual evidence suggests that stationarity cannot be assumed in levels
 
 ------------------------------------------------------------------------
 
@@ -315,18 +414,18 @@ plot(
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Now, we apply the FRED-MD benchmark transformations:
+\textcolor{navyblue}{$\bullet$} Now, we apply the FRED-MD benchmark transformations:
 
 \footnotesize
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   $\Delta \log(\textit{INDPRO}_t)$
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   $\Delta^2 \log(\textit{CPIAUCSL}_t)$
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   $\Delta \textit{FEDFUNDS}_t$
 
 \end{itemize}
@@ -390,38 +489,37 @@ plot(
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Now, we apply the FRED-MD benchmark transformations:
+\textcolor{navyblue}{$\bullet$} Now, we apply the FRED-MD benchmark transformations:
 
 \footnotesize
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   $\Delta \log(\textit{INDPRO}_t)$
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   $\Delta^2 \log(\textit{CPIAUCSL}_t)$
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   $\Delta \textit{FEDFUNDS}_t$
 
 \end{itemize}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} The transformations substantially changes the persistence of the series \vspace{-0.5em} \small
+\textcolor{navyblue}{$\bullet$} The transformations substantially changes the persistence of the series \vspace{-0.5em} \small
 
 \begin{itemize}
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
     Less persistence and no obvious deterministic trend
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
     Consistent with stationarity, but visual inspection is not sufficient to establish it
 \end{itemize}
 
 \normalsize
 
-\textcolor{blue}{$\Rightarrow$} Still need to formally assess whether the transformed series are stationary
+\textcolor{navyblue}{$\Rightarrow$} Still need to formally assess whether the transformed series are stationary
 
-------------------------------------------------------------------------
 
 ```{r}
 #| include: false
@@ -631,27 +729,41 @@ unit_root_manual_slide$Delta_2 <- format.pval(
 )
 ```
 
-## Unit Root Testing {.t}
+# Unit Root Testing
+## Integrated processes
+
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Test whether the level series contain unit roots using bootstrap ADF tests
+\textcolor{navyblue}{$\bullet$} The objective is to determine the order of integration of each series $$y_t \sim I(d)$$ where $d$ is the number of differences required to obtain a stationary series
 
-\vspace{0.35em}
+\vspace{0.45em}
+
+\textcolor{navyblue}{$\bullet$} This determines the transformation used before estimating the VAR.
+
+------------------------------------------------------------------------
+
+## Automatic Integration Order {.t}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} First, use \texttt{order\_integration()} with bootstrap ADF tests
+
+\vspace{0.3em}
 
 \footnotesize
 
-$$
-H_0:\text{unit root}
-\qquad
-H_1:\text{stationary}
-$$
+\texttt{order\_integration(}
+
+\texttt{\hspace{1em} x, method = "boot\_adf",}
+
+\texttt{\hspace{1em} deterministics = "...", B = 4999)}
 
 \vspace{0.35em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Results are compared under trend and intercept specifications
+\textcolor{navyblue}{$\bullet$} The procedure tests successive integration orders automatically
 
 \vspace{0.3em}
 
@@ -666,17 +778,26 @@ knitr::kable(
   row.names = FALSE,
   align = "c"
 )
+
 ```
 
----
+\vspace{0.3em}
+\footnotesize
 
-## Unit Root Results {.t}
+\quad[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] The procedure is repeated with a trend and with an intercept to assess sensitivity to the deterministic specification.
+
+------------------------------------------------------------------------
+
+## Manual Verification {.t}
+
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Verify the order of integration by testing levels and successive differences
+\textcolor{navyblue}{$\bullet$} We then apply \texttt{boot\_adf()} directly to the level and successive differences $$y_t\rightarrow \Delta y_t\rightarrow\Delta^2 y_t$$
 
-\vspace{0.3em}
+
+\vspace{0.35em}
 
 \scriptsize
 
@@ -689,27 +810,22 @@ knitr::kable(
   row.names = FALSE,
   align = "c"
 )
+
 ```
 
-\vspace{0.35em}
+\vspace{0.25em}
 
-\footnotesize
+\textcolor{navyblue}{$\bullet$} $p<0.05$ rejects the unit-root null; the integration order is the number of differences required for rejection
 
-$p<0.05$ rejects the unit-root null
+------------------------------------------------------------------------
 
-\vspace{0.35em}
+## CPI: I(1) or I(2)?{.t}
 
-\normalsize
-
-\textcolor{blue}{$\bullet$} These results guide the stationary transformations used in the VAR
-
----
-
-## CPI: I(1) or I(2)? {.t}
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} CPI gives different integration orders across deterministic specifications
+\textcolor{navyblue}{$\bullet$} CPI is sensitive to the deterministic specification
 
 \vspace{0.35em}
 
@@ -717,27 +833,27 @@ $p<0.05$ rejects the unit-root null
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
-  Trend: $I($`r CPI_trend$order_int`$)$
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+  \texttt{order\_integration()} with trend: $I(2)$
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
-  Intercept: $I($`r CPI_intercept$order_int`$)$
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+  \texttt{order\_integration()} with intercept: $I(1)$
+
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+  Manual \texttt{boot\_adf()} sequence: $I(1)$ at the 5\% level
 
 \end{itemize}
 
-\vspace{0.35em}
+\vspace{0.4em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} The evidence is therefore specification-sensitive
+\textcolor{navyblue}{$\bullet$} The integration order of CPI is therefore not fully robust
 
 \vspace{0.3em}
 
-\footnotesize
+\textcolor{navyblue}{$\bullet$} We retain the FRED-MD benchmark transformation $\Delta^2\log(CPI)$ for the VAR
 
-We retain the FRED-MD benchmark transformation $\Delta^2\log(CPI)$ for the VAR
-
----
 
 ```{r}
 #| echo: false
@@ -981,102 +1097,147 @@ test_decision <- function(p, alpha = 0.05) {
 
 ```
 
-## VAR Specification
+# VAR Specification and Model Selection
+## VAR Specification {.t}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Define the vector of stationary variables as
+\textcolor{navyblue}{$\bullet$} Define the vector of stationary variables as
 
-$$\mathbf{y}_t =
+$$
+\mathbf y_t
+=
 \begin{bmatrix}
-\Delta \log(\mathit{INDPRO}_t) \\
-\Delta^2 \log(\mathit{CPIAUCSL}_t) \\
-\Delta \mathit{FEDFUNDS}_t
+IP_t\\
+CPI_t\\
+FFR_t
 \end{bmatrix}
 =
 \begin{bmatrix}
-IP_t \\
-CPI_t \\
-FFR_t
-\end{bmatrix}$$
+\Delta\log(INDPRO_t)\\
+\Delta^2\log(CPIAUCSL_t)\\
+\Delta FEDFUNDS_t
+\end{bmatrix}
+$$
 
-\textcolor{blue}{$\bullet$} Following \textit{Pfaff (2008)}, specify the reduced-form VAR($p$) as
+\vspace{0.45em}
 
-$$\mathbf{y}_t
+\textcolor{navyblue}{$\bullet$} The VAR($p$) can be written in companion form as
+
+\scriptsize
+
+$$
+\boldsymbol{\xi}_t
 =
-\mathbf{c}
+\mathbf c^*
 +
-A_1 \mathbf{y}_{t-1}
-+\cdots+
-A_p \mathbf{y}_{t-p}
+\mathbf F \boldsymbol{\xi}_{t-1}
 +
-\mathbf{u}_t$$
+\mathbf v_t
+$$
+
+$$
+\boldsymbol{\xi}_t
+=
+\begin{bmatrix}
+\mathbf y_t\\
+\mathbf y_{t-1}\\
+\vdots\\
+\mathbf y_{t-p+1}
+\end{bmatrix},
+\quad
+\mathbf v_t
+=
+\begin{bmatrix}
+\mathbf u_t\\
+\mathbf 0\\
+\vdots\\
+\mathbf 0
+\end{bmatrix},
+\quad
+\mathbf F
+=
+\begin{bmatrix}
+A_1 & A_2 & \cdots & A_{p-1} & A_p\\
+I_3 & 0   & \cdots & 0       & 0\\
+0   & I_3 & \cdots & 0       & 0\\
+\vdots & \vdots & \ddots & \vdots & \vdots\\
+0   & 0   & \cdots & I_3     & 0
+\end{bmatrix}
+$$
+\footnotesize
+
+Here, $\boldsymbol{\xi}_t$ stacks the current and lagged values of the system
+
+---
 
 ## Lag Order Selection
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Common methods to determine the lag order given by \textit{Kilian and Lütkepohl (2017)} include:
+\textcolor{navyblue}{$\bullet$} Common methods to determine the lag order given by \textit{Kilian and Lütkepohl (2017)} include:
 
 \vspace{0.4em}
 
 \footnotesize
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textbf{Top-down testing}: Start with many lags and remove the highest lag step by step if it adds little information
   \begin{itemize}
   \scriptsize
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Simple and directly tests lag relevance
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Depends on the starting order
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Simple and directly tests lag relevance
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Depends on the starting order
   \end{itemize}
   \vspace{0.4em}
 
   \footnotesize
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textbf{Bottom-up testing}: Start with few lags and add more only if they meaningfully improve the model
   
   \begin{itemize}
   \scriptsize
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Favors parsimonious models
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} May stop too early and miss longer-run dynamics
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Favors parsimonious models
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} May stop too early and miss longer-run dynamics
   \end{itemize}
   \vspace{0.4em}
 
   \footnotesize
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textbf{Forecast-based selection}: Choose the lag order with the best predictive performance
   \begin{itemize}
   \scriptsize
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Directly targets forecasting \quad
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Depends on horizon and evaluation sample
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Directly targets forecasting \quad
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Depends on horizon and evaluation sample
   \end{itemize}
 
 \end{itemize}
 
 ------------------------------------------------------------------------
 
-## Information Criteria
+## Information Criteria{.t}
+
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} An alternative is to compare candidate VAR specifications using information criteria
+\textcolor{navyblue}{$\bullet$} An alternative is to compare candidate VAR specifications using information criteria
 
 \vspace{0.4em}
 
 \footnotesize
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textbf{AIC} -- Comparatively weaker penalty for additional parameters
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textbf{HQ} -- Intermediate penalty for model complexity
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textbf{SC/BIC} -- Stronger penalty, generally favoring more parsimonious models
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textbf{FPE} -- Evaluates the estimated prediction error of competing specifications
 
 \end{itemize}
@@ -1087,18 +1248,20 @@ A_p \mathbf{y}_{t-p}
 
 \begin{itemize}
 
-\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Systematic comparison of fit and model complexity
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]\textit{Adv.:} Systematic comparison of fit and model complexity
 
-\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Different criteria may select different lag orders
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]\textit{Lim.:} Different criteria may select different lag orders
 \end{itemize}
 
 ------------------------------------------------------------------------
 
-## Lag Selection Results -- Information Criteria
+## Lag Selection Results -- Information Criteria{.t}
+
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Lag orders are selected using \texttt{VARselect()} from the \texttt{vars} package, comparing AIC, HQ, SC/BIC and FPE:
+\textcolor{navyblue}{$\bullet$} Lag orders are selected using \texttt{VARselect()} from the \texttt{vars} package, comparing AIC, HQ, SC/BIC and FPE:
 
 ```{r}
 #| echo: false
@@ -1131,88 +1294,72 @@ cat("\\end{center}\n")
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} AIC selects $p=14$, while SC/BIC selects $p=3$
+\textcolor{navyblue}{$\bullet$} AIC selects $p=14$, while SC/BIC selects $p=3$
 
-\quad\textcolor{blue}{$\Rightarrow$} These define the two candidate lag specifications
+\quad\textcolor{navyblue}{$\Rightarrow$} These define the two candidate lag specifications
 
 ------------------------------------------------------------------------
 
-## VAR Estimation
+## VAR Estimation {.t}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Each candidate specification is estimated separately using \texttt{VAR()} from the \texttt{vars} package
+\textcolor{navyblue}{$\bullet$} The two candidate specifications are estimated using \texttt{VAR()}
 
-\vspace{0.5em}
+\vspace{0.25em}
 
 \footnotesize
+
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   AIC specification: VAR(14)
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   SC/BIC specification: VAR(3)
 
 \end{itemize}
 
+\vspace{0.4em}
+
 \normalsize
 
-\textcolor{blue}{$\bullet$} For each specification,
+\textcolor{navyblue}{$\bullet$} For each lag $j$, estimation produces
 
-$$\widehat{\mathbf{y}}_t
-=
-\widehat{\mathbf{c}}
-+
-\widehat{A}_1\mathbf{y}_{t-1}
-+\cdots+
-\widehat{A}_p\mathbf{y}_{t-p}$$
+\vspace{0.3em}
+
+$$
+\widehat A_j =
+\begin{bmatrix}
+\hat a_{11,j} & \hat a_{12,j} & \hat a_{13,j}\\
+\hat a_{21,j} & \hat a_{22,j} & \hat a_{23,j}\\
+\hat a_{31,j} & \hat a_{32,j} & \hat a_{33,j}
+\end{bmatrix}
+$$
+
+\vspace{0.35em}
 
 \footnotesize
 
-\quad\textcolor{blue}{$\rightarrow$} Each matrix $\widehat{A}_j$ contains the estimated own- and cross-lag effects among output growth, changes in inflation, and changes in the policy rate.
+\quad [\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] Rows correspond to the $IP$, $CPI$ and $FFR$ equations; columns correspond to lagged $IP$, $CPI$ and $FFR$
+
+\vspace{0.3em}
+
+\quad [\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] Diagonal elements capture own-lag effects, while off-diagonal elements capture cross-variable predictive effects
 
 ------------------------------------------------------------------------
 
-## Coefficient Interpretation
+## VAR Stability{.t}
 
-\vspace{-1em}
-
-\normalsize
-
-\textcolor{blue}{$\bullet$} Each row of $\widehat{A}_j$ corresponds to one VAR equation, while each column measures the effect of a lagged system variable
-
-\vspace{0.5em}
-
-\footnotesize
-\begin{itemize}
-
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
-  Diagonal coefficients capture own-lag persistence
-
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
-  Off-diagonal coefficients capture cross-variable predictive effects
-
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
-  Coefficients are interpreted conditional on the remaining variables and included lags
-
-\end{itemize}
+\vspace{1em}
 
 \normalsize
 
-\quad\textcolor{blue}{$\rightarrow$} The coefficients describe reduced-form dynamic relationships, not structural causal effects
-
-------------------------------------------------------------------------
-
-## VAR Stability
-
-\normalsize
-
-\textcolor{blue}{$\bullet$} Stability assessed using \texttt{roots()} from the \texttt{vars} package
+\textcolor{navyblue}{$\bullet$} Stability assessed using \texttt{roots()} from the \texttt{vars} package
 
 \vspace{0.4em}
 
-\textcolor{blue}{$\bullet$} A VAR is stable if all characteristic roots satisfy $|\lambda_i| < 1$
+\textcolor{navyblue}{$\bullet$} A VAR is stable if all characteristic roots satisfy $|\lambda_i| < 1$
 
 \footnotesize
 
@@ -1259,16 +1406,16 @@ cat("\\end{center}\n")
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Both specifications satisfy the stability condition
+\textcolor{navyblue}{$\bullet$} Both specifications satisfy the stability condition
 
 \footnotesize
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   AIC: maximum modulus $= 0.939$ -- dynamics are relatively persistent
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   SC/BIC: maximum modulus $= 0.665$ -- shocks decay more rapidly through the system
 
 \end{itemize}
@@ -1279,25 +1426,25 @@ cat("\\end{center}\n")
 
 \small
 
-\textcolor{blue}{$\bullet$} Residual properties are assessed using \texttt{serial.test()}, \texttt{arch.test()} and \texttt{normality.test()} from the \texttt{vars} package \textit{(Pfaff, 2008)}
+\textcolor{navyblue}{$\bullet$} Residual properties are assessed using \texttt{serial.test()}, \texttt{arch.test()} and \texttt{normality.test()} from the \texttt{vars} package \textit{(Pfaff, 2008)}
 
 \vspace{0.4em}
 
 \footnotesize
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textbf{Serial correlation:}
   $H_0$ -- no residual serial correlation
 
   \scriptsize
   \begin{itemize}
 
-    \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]
+    \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]
     AIC VAR(14): $p=0.0060$
     $\rightarrow$ reject $H_0$
 
-    \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]
+    \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]
     SC/BIC VAR(3): $p<0.0001$
     $\rightarrow$ reject $H_0$
 
@@ -1309,14 +1456,14 @@ cat("\\end{center}\n")
   \vspace{0.35em}
 
   \footnotesize
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   \textbf{ARCH effects:}
   $H_0$ -- no conditional heteroskedasticity
 
   \scriptsize
   \begin{itemize}
 
-    \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]
+    \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]
     Both specifications: $p<0.0001$
     $\rightarrow$ reject $H_0$
 
@@ -1328,14 +1475,14 @@ cat("\\end{center}\n")
   \vspace{0.35em}
 
   \footnotesize
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   (\textbf{Normality:}
   $H_0$ -- multivariate normality)
 
   \scriptsize
   \begin{itemize}
 
-    \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\blacktriangleright$}}]
+    \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\blacktriangleright$}}]
     Both specifications: $p<0.0001$
     $\rightarrow$ reject $H_0$
 
@@ -1353,25 +1500,24 @@ cat("\\end{center}\n")
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Neither specification fully eliminates residual serial correlation
+\textcolor{navyblue}{$\bullet$} Neither specification fully eliminates residual serial correlation
 
 \vspace{0.5em}
 
-\textcolor{blue}{$\bullet$} The SC/BIC VAR(3) is more parsimonious, while the AIC VAR(14) allows for richer monthly dynamics
+\textcolor{navyblue}{$\bullet$} The SC/BIC VAR(3) is more parsimonious, while the AIC VAR(14) allows for richer monthly dynamics
 
 \vspace{0.5em}
 
-\textcolor{blue}{$\bullet$} VAR(14) is retained as the model specification for the subsequent IRF analysis
+\textcolor{navyblue}{$\bullet$} VAR(14) is retained as the model specification for the subsequent IRF analysis
 
 \vspace{0.25em}
 
 \scriptsize
 
 \begin{itemize}
-  \item[\textcolor{blue}{$\rightarrow$}]\textbf{Results should be interpreted cautiously given the remaining residual misspecification!}
+  \item[\textcolor{navyblue}{$\rightarrow$}]\textbf{Results should be interpreted cautiously given the remaining residual misspecification!}
 \end{itemize}
 
-------------------------------------------------------------------------
 
 ```{r}
 #| include: false
@@ -1601,28 +1747,29 @@ granger_pairwise_slide$p_value <- format.pval(
 
 ```
 
+# Granger Causality
 ## Granger Causality {.t}
 
 \vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} $x$ Granger-causes $y$ if past $x$ improves the prediction of $y$, conditional on the VAR
+\textcolor{navyblue}{$\bullet$} $x$ Granger-causes $y$ if past $x$ improves the prediction of $y$, conditional on the VAR
 
 \vspace{0.45em}
 
-\textcolor{blue}{$\bullet$} Granger causality is predictive, not necessarily structural causality
+\textcolor{navyblue}{$\bullet$} Granger causality is predictive, not necessarily structural causality
 
 \vspace{0.45em}
 
-\textcolor{blue}{$\bullet$} The \texttt{vars} package provides the function \texttt{causality()}
+\textcolor{navyblue}{$\bullet$} The \texttt{vars} package provides the function \texttt{causality()}
 
 \vspace{0.4em}
 
 \footnotesize
 \begin{itemize}
 
-\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] For a some variable $x$,
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] For a some variable $x$,
 
 \end{itemize}
 
@@ -1646,7 +1793,7 @@ $$H_1:
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} In a trivariate VAR, \texttt{causality()} tests the chosen variables against the remaining ones jointly
+\textcolor{navyblue}{$\bullet$} In a trivariate VAR, \texttt{causality()} tests the chosen variables against the remaining ones jointly
 
 \vspace{0.35em}
 
@@ -1667,9 +1814,11 @@ knitr::kable(
 
 ## Pairwise Granger Causality {.t}
 
+\vspace{1em}
+
 \normalsize
 
-\textcolor{blue}{$\bullet$} Test the six directional relationships separately while retaining the full trivariate VAR
+\textcolor{navyblue}{$\bullet$} Test the six directional relationships separately while retaining the full trivariate VAR
 
 \vspace{0.3em}
 
@@ -1687,15 +1836,6 @@ knitr::kable(
 
 ```
 
-\normalsize
-
-\textcolor{blue}{$\bullet$} For each pair, the null sets all 14 lags of the proposed cause equal to zero in the response equation
-
-\vspace{0.3em}
-
-\textcolor{blue}{$\bullet$} The remaining VAR variable is retained, so these are conditional Granger-causality tests
-
-------------------------------------------------------------------------
 
 ```{r}
 #| include: false
@@ -1812,13 +1952,14 @@ irf_ffr_levels <- to_levels(
 
 ```
 
+# Impulse Response Functions
 ## Impulse Response Functions {.t}
 
 \vspace{2em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} An impulse response function traces how one variable reacts over time to an innovation in another variable
+\textcolor{navyblue}{$\bullet$} An impulse response function traces how one variable reacts over time to an innovation in another variable
 
 \vspace{0.35em}
 
@@ -1826,18 +1967,18 @@ irf_ffr_levels <- to_levels(
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   Impulse: variable receiving the initial innovation
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   Response: variable whose reaction is followed over subsequent horizons
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   The IRF summarizes the sign, magnitude and persistence of the response
 
 \end{itemize}
 
-------------------------------------------------------------------------
+---
 
 ## IRF Implementation {.t}
 
@@ -1845,7 +1986,7 @@ irf_ffr_levels <- to_levels(
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Compute IRFs using \texttt{irf()} from the \texttt{vars} package
+\textcolor{navyblue}{$\bullet$} Compute IRFs using \texttt{irf()} from the \texttt{vars} package
 
 \vspace{0.4em}
 
@@ -1863,9 +2004,11 @@ irf_ffr_levels <- to_levels(
 
 \texttt{\hspace{1em} boot = TRUE)}
 
-------------------------------------------------------------------------
+---
 
-## IRF Point Estimates
+## IRF Point Estimates{.t}
+
+\vspace{-1.8em}
 
 ```{r}
 #| echo: false
@@ -2000,11 +2143,11 @@ par(mfrow = c(1, 1))
 
 ## Responses to an IP Innovation {.t}
 
-\vspace{2em}
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Impulse: IP, $\Delta\log(INDPRO)$
+\textcolor{navyblue}{$\bullet$} Impulse: IP, $\Delta\log(INDPRO)$
 
 \vspace{0.4em}
 
@@ -2012,13 +2155,13 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   IP — strongly positive on impact, followed by rapid decay and a small negative overshoot
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   CPI — alternating positive and negative movements that become progressively smaller
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   FFR — large positive short-run response followed by oscillations around zero
 
 \end{itemize}
@@ -2027,17 +2170,17 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Most of the effect is concentrated at short horizons and eventually dies out
+\textcolor{navyblue}{$\bullet$} Most of the effect is concentrated at short horizons and eventually dies out
 
 ------------------------------------------------------------------------
 
 ## Responses to a CPI Innovation {.t}
 
-\vspace{2em}
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Impulse: CPI, $\Delta^2\log(CPI)$
+\textcolor{navyblue}{$\bullet$} Impulse: CPI, $\Delta^2\log(CPI)$
 
 \vspace{0.4em}
 
@@ -2045,13 +2188,13 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   IP — initially positive, followed by a negative overshoot and gradual convergence toward zero
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   CPI — positive on impact, followed by a sharp negative correction and mean reversion
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   FFR — large short-run fluctuations that diminish over time
 
 \end{itemize}
@@ -2060,15 +2203,17 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} The responses are again concentrated mainly in the first 15--20 months
+\textcolor{navyblue}{$\bullet$} The responses are again concentrated mainly in the first 15--20 months
 
 ------------------------------------------------------------------------
 
-## Responses to an FFR Innovation
+## Responses to an FFR Innovation{.t}
+
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Impulse: FFR, $\Delta FFR$
+\textcolor{navyblue}{$\bullet$} Impulse: FFR, $\Delta FFR$
 
 \vspace{0.4em}
 
@@ -2076,13 +2221,13 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   IP — becomes negative after a few months and gradually returns toward zero
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   CPI — oscillates around zero with declining amplitude
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   FFR — positive on impact, followed by a reversal and damped oscillations
 
 \end{itemize}
@@ -2091,17 +2236,17 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} The negative IP response is consistent with contractionary dynamics following a positive FFR innovation
+\textcolor{navyblue}{$\bullet$} The negative IP response is consistent with contractionary dynamics following a positive FFR innovation
 
 ------------------------------------------------------------------------
 
 ## The Price Puzzle {.t}
 
-\vspace{2em}
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Bernanke et al. (2005) discuss the price puzzle
+\textcolor{navyblue}{$\bullet$} Bernanke et al. (2005) discuss the price puzzle
 
 \vspace{0.4em}
 
@@ -2109,10 +2254,10 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   A contractionary monetary-policy shock is followed by an increase in the price level
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   The relevant relationship in our VAR is an FFR impulse and a CPI response
 
 \end{itemize}
@@ -2121,7 +2266,7 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} CPI enters the VAR as $\Delta^2\log(CPI)$
+\textcolor{navyblue}{$\bullet$} CPI enters the VAR as $\Delta^2\log(CPI)$
 
 \vspace{0.3em}
 
@@ -2129,21 +2274,23 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] The transformed CPI response therefore cannot by itself determine whether the price level rises
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] The transformed CPI response therefore cannot by itself determine whether the price level rises
 
 \end{itemize}
 
 ------------------------------------------------------------------------
 
-## Bootstrap Confidence Intervals
+## Bootstrap Confidence Intervals{.t}
+
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Point estimates do not show the sampling uncertainty surrounding the IRFs
+\textcolor{navyblue}{$\bullet$} Point estimates do not show the sampling uncertainty surrounding the IRFs
 
 \vspace{0.4em}
 
-\textcolor{blue}{$\bullet$} With \texttt{boot = TRUE}, \texttt{irf()} uses a residual bootstrap
+\textcolor{navyblue}{$\bullet$} With \texttt{boot = TRUE}, \texttt{irf()} uses a residual bootstrap
 
 \vspace{0.35em}
 
@@ -2169,15 +2316,15 @@ par(mfrow = c(1, 1))
 
 ## Constructing the Confidence Interval {.t}
 
-\vspace{2em}
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Each bootstrap replication produces a new estimate of the IRF at every horizon
+\textcolor{navyblue}{$\bullet$} Each bootstrap replication produces a new estimate of the IRF at every horizon
 
 \vspace{0.4em}
 
-\textcolor{blue}{$\bullet$} The \texttt{vars} package uses a standard percentile interval
+\textcolor{navyblue}{$\bullet$} The \texttt{vars} package uses a standard percentile interval
 
 \vspace{0.4em}
 
@@ -2193,7 +2340,7 @@ $$CI_h^{95\%}
 \small
 \begin{itemize}
 
-\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] The lower and upper bounds are the 2.5th and 97.5th percentiles of the bootstrap IRF distribution at horizon $h$
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] The lower and upper bounds are the 2.5th and 97.5th percentiles of the bootstrap IRF distribution at horizon $h$
 
 \end{itemize}
 
@@ -2201,11 +2348,13 @@ $$CI_h^{95\%}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Pointwise confidence intervals: uncertainty is assessed separately at each horizon
+\textcolor{navyblue}{$\bullet$} Pointwise confidence intervals: uncertainty is assessed separately at each horizon
 
 ------------------------------------------------------------------------
 
-## IRFs with 95% Bootstrap Bands
+## IRFs with 95% Bootstrap Bands{.t}
+
+\vspace{-1.8em}
 
 ```{r}
 #| echo: false
@@ -2370,7 +2519,7 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} A response is pointwise significant at the 5% level when its 95% confidence band excludes zero
+\textcolor{navyblue}{$\bullet$} A response is pointwise significant at the 5% level when its 95% confidence band excludes zero
 
 \vspace{0.3em}
 
@@ -2378,13 +2527,13 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   The clearest evidence is concentrated in short-run own-responses
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   Several cross-responses are imprecisely estimated and their bands include zero over much of the horizon
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   Statistical significance generally weakens as the horizon increases
 
 \end{itemize}
@@ -2395,18 +2544,18 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} The VAR is estimated using stationary transformations rather than the original levels
+\textcolor{navyblue}{$\bullet$} The VAR is estimated using stationary transformations rather than the original levels
 
 \vspace{0.4em}
 
-\textcolor{blue}{$\bullet$} A response in first differences is converted to a level response by accumulating the IRF (Lütkepohl, 2005)
+\textcolor{navyblue}{$\bullet$} A response in first differences is converted to a level response by accumulating the IRF (Lütkepohl, 2005)
 
 \vspace{0.35em}
 
 \footnotesize
 \begin{itemize}
 
-\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] For industrial production:
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] For industrial production:
 
 $$
 IRF_h^{\log(INDPRO)}
@@ -2415,7 +2564,7 @@ IRF_h^{\log(INDPRO)}
 IRF_s^{\Delta\log(INDPRO)}
 $$
 
-\item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}] For the federal funds rate:
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] For the federal funds rate:
 
 $$
 IRF_h^{FFR}
@@ -2430,13 +2579,13 @@ $$
 
 ## Recovering the CPI Level Response {.t}
 
-\vspace{2em}
+\vspace{1em}
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} CPI enters the VAR in second log differences $\Delta^2\log(CPI_t)$
+\textcolor{navyblue}{$\bullet$} CPI enters the VAR in second log differences $\Delta^2\log(CPI_t)$
 
-\textcolor{blue}{$\bullet$} Its response therefore requires two accumulations
+\textcolor{navyblue}{$\bullet$} Its response therefore requires two accumulations
 
 \vspace{0.3em}
 
@@ -2467,11 +2616,13 @@ $$
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} The resulting CPI IRF describes the cumulative response of the log price level
+\textcolor{navyblue}{$\bullet$} The resulting CPI IRF describes the cumulative response of the log price level
 
 ------------------------------------------------------------------------
 
-## IRFs Reconstructed in Levels
+## IRFs Reconstructed in Levels{.t}
+
+\vspace{-1.8em}
 
 ```{r}
 #| echo: false
@@ -2616,7 +2767,7 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Accumulation changes the interpretation of the responses
+\textcolor{navyblue}{$\bullet$} Accumulation changes the interpretation of the responses
 
 \vspace{0.4em}
 
@@ -2624,13 +2775,13 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   An IP innovation produces persistent positive responses in industrial production and the CPI level
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   A CPI innovation produces persistent cumulative responses in all three level variables
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   An FFR innovation produces a persistent negative response in industrial production and a positive response in the CPI level
 
 \end{itemize}
@@ -2639,7 +2790,7 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
+\textcolor{navyblue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
 
 ------------------------------------------------------------------------
 
@@ -2649,7 +2800,7 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Accumulation changes the interpretation of the responses
+\textcolor{navyblue}{$\bullet$} Accumulation changes the interpretation of the responses
 
 \vspace{0.4em}
 
@@ -2657,13 +2808,13 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   An IP innovation produces persistent positive responses in industrial production and the CPI level
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   A CPI innovation produces persistent cumulative responses in all three level variables
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   An FFR innovation produces a persistent negative response in industrial production and a positive response in the CPI level
 
 \end{itemize}
@@ -2672,11 +2823,11 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
+\textcolor{navyblue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
 
 \vspace{0.45em}
 
-\textcolor{blue}{$\Rightarrow$} \underline{So, does the price puzzle occur?}
+\textcolor{navyblue}{$\Rightarrow$} \underline{So, does the price puzzle occur?}
 
 ------------------------------------------------------------------------
 
@@ -2686,7 +2837,7 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Accumulation changes the interpretation of the responses
+\textcolor{navyblue}{$\bullet$} Accumulation changes the interpretation of the responses
 
 \vspace{0.4em}
 
@@ -2694,13 +2845,13 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   An IP innovation produces persistent positive responses in industrial production and the CPI level
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   A CPI innovation produces persistent cumulative responses in all three level variables
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   An FFR innovation produces a persistent negative response in industrial production and a positive response in the CPI level
 
 \end{itemize}
@@ -2709,11 +2860,11 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
+\textcolor{navyblue}{$\bullet$} Unlike the IRFs of the differenced variables, the reconstructed level responses need not converge back to zero
 
 \vspace{0.45em}
 
-\textcolor{blue}{$\Rightarrow$} \underline{So, does the price puzzle occur?} \quad \textbf{Yes and no.}
+\textcolor{navyblue}{$\Rightarrow$} \underline{So, does the price puzzle occur?} \quad \textbf{Yes and no.}
 
 ------------------------------------------------------------------------
 
@@ -2721,11 +2872,11 @@ par(mfrow = c(1, 1))
 
 \normalsize
 
-\textcolor{blue}{$\bullet$} Reduced-form IRFs describe responses to VAR forecast errors
+\textcolor{navyblue}{$\bullet$} Reduced-form IRFs describe responses to VAR forecast errors
 
 \vspace{0.4em}
 
-\textcolor{blue}{$\bullet$} These innovations are not automatically interpretable as specific economic shocks
+\textcolor{navyblue}{$\bullet$} These innovations are not automatically interpretable as specific economic shocks
 
 \vspace{0.2em}
 
@@ -2733,13 +2884,13 @@ par(mfrow = c(1, 1))
 
 \begin{itemize}
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   Reduced-form residuals may be contemporaneously correlated
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   A policy-rate innovation need not represent an exogenous monetary-policy shock
 
-  \item[\raise0.15ex\hbox{\textcolor{blue}{\tiny$\circ$}}]
+  \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   Structural analysis requires additional identifying restrictions
 
 \end{itemize}
@@ -2749,3 +2900,15 @@ par(mfrow = c(1, 1))
 \normalsize
 
 The present IRFs are informative about dynamic propagation, but causal structural interpretation requires an identified structural VAR
+
+---
+
+## {.plain}
+
+\vfill
+
+\begin{center}
+{\LARGE \textcolor{navyblue}{Thank you for your attention!}}
+\end{center}
+
+\vfill
