@@ -2,7 +2,7 @@
 title: "Case 2: Structural Vector AutoRegressive Models, Local Projections and Macro-economic Policy Analysis"
 subtitle: "EBC4008 -- Time Series Analytics"
 author:
-  - "Çan Idil"
+  - "Can Idil"
   - "Sem Huizinga"
   - "Juan Diego Gaviño"
 format:
@@ -104,7 +104,6 @@ execute:
   \item Impulse Response Functions
 \end{enumerate}
 
----
 
 # Data Exploration
 ## Overview
@@ -741,13 +740,44 @@ unit_root_manual_slide$Delta_2 <- format.pval(
 
 \textcolor{navyblue}{$\bullet$} This determines the transformation used before estimating the VAR.
 
+---
+
+## Manual Verification {.t}
+
+\vspace{1em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} First, use \texttt{boot\_adf()} directly to the level and successive differences $$y_t\rightarrow \Delta y_t\rightarrow\Delta^2 y_t$$
+
+
+\vspace{0.35em}
+
+\scriptsize
+
+```{r}
+#| echo: false
+#| results: asis
+
+knitr::kable(
+  unit_root_manual_slide,
+  row.names = FALSE,
+  align = "c"
+)
+
+```
+
+\vspace{0.25em}
+
+\textcolor{navyblue}{$\bullet$} $p<0.05$ rejects the unit-root null; the integration order is the number of differences required for rejection
+
 ------------------------------------------------------------------------
 
 ## Automatic Integration Order {.t}
 
 \normalsize
 
-\textcolor{navyblue}{$\bullet$} First, use \texttt{order\_integration()} with bootstrap ADF tests
+\textcolor{navyblue}{$\bullet$} We then apply  \texttt{order\_integration()} with bootstrap ADF tests
 
 \vspace{0.3em}
 
@@ -784,38 +814,7 @@ knitr::kable(
 \vspace{0.3em}
 \footnotesize
 
-\quad[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] The procedure is repeated with a trend and with an intercept to assess sensitivity to the deterministic specification.
-
-------------------------------------------------------------------------
-
-## Manual Verification {.t}
-
-\vspace{1em}
-
-\normalsize
-
-\textcolor{navyblue}{$\bullet$} We then apply \texttt{boot\_adf()} directly to the level and successive differences $$y_t\rightarrow \Delta y_t\rightarrow\Delta^2 y_t$$
-
-
-\vspace{0.35em}
-
-\scriptsize
-
-```{r}
-#| echo: false
-#| results: asis
-
-knitr::kable(
-  unit_root_manual_slide,
-  row.names = FALSE,
-  align = "c"
-)
-
-```
-
-\vspace{0.25em}
-
-\textcolor{navyblue}{$\bullet$} $p<0.05$ rejects the unit-root null; the integration order is the number of differences required for rejection
+\quad\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}} The procedure is repeated with a trend and with an intercept to assess sensitivity to the deterministic specification.
 
 ------------------------------------------------------------------------
 
@@ -1120,7 +1119,7 @@ FFR_t
 \end{bmatrix}
 $$
 
-\vspace{0.45em}
+\vspace{0.3em}
 
 \textcolor{navyblue}{$\bullet$} The VAR($p$) can be written in companion form as
 
@@ -1167,7 +1166,9 @@ I_3 & 0   & \cdots & 0       & 0\\
 $$
 \footnotesize
 
-Here, $\boldsymbol{\xi}_t$ stacks the current and lagged values of the system
+\vspace{-0.5em}
+
+\qquad $\rightarrow$ Here, $\boldsymbol{\xi}_t$ stacks the current and lagged values of the system
 
 ---
 
@@ -1320,13 +1321,11 @@ cat("\\end{center}\n")
 
 \end{itemize}
 
-\vspace{0.4em}
+\vspace{0.3em}
 
 \normalsize
 
 \textcolor{navyblue}{$\bullet$} For each lag $j$, estimation produces
-
-\vspace{0.3em}
 
 $$
 \widehat A_j =
@@ -1341,25 +1340,25 @@ $$
 
 \footnotesize
 
-\quad [\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] Rows correspond to the $IP$, $CPI$ and $FFR$ equations; columns correspond to lagged $IP$, $CPI$ and $FFR$
+\quad \raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}} Rows correspond to the $IP$, $CPI$ and $FFR$ equations; columns correspond to lagged $IP$, $CPI$ and $FFR$
 
 \vspace{0.3em}
 
-\quad [\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] Diagonal elements capture own-lag effects, while off-diagonal elements capture cross-variable predictive effects
+\quad \raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}} Diagonal elements capture own-lag effects, while off-diagonal elements capture cross-variable predictive effects
 
-------------------------------------------------------------------------
+---
 
-## VAR Stability{.t}
+## VAR Stability {.t}
 
 \vspace{1em}
 
-\normalsize
+\small
 
-\textcolor{navyblue}{$\bullet$} Stability assessed using \texttt{roots()} from the \texttt{vars} package
+\textcolor{navyblue}{$\bullet$} Stability is assessed using \texttt{roots()} from the \texttt{vars} package
 
 \vspace{0.4em}
 
-\textcolor{navyblue}{$\bullet$} A VAR is stable if all characteristic roots satisfy $|\lambda_i| < 1$
+\textcolor{navyblue}{$\bullet$} A VAR is stable if all eigenvalues of the companion matrix satisfy \scriptsize$|\lambda_i|< 1$
 
 \footnotesize
 
@@ -1404,23 +1403,21 @@ cat("\\end{center}\n")
 
 ```
 
-\normalsize
-
+\small
 \textcolor{navyblue}{$\bullet$} Both specifications satisfy the stability condition
-
+\vspace{0.25em}
 \footnotesize
-
 \begin{itemize}
-
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  AIC: maximum modulus $= 0.939$ -- dynamics are relatively persistent
-
+  AIC: maximum modulus $= 0.939$ -- closer to the unit-circle boundary
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  SC/BIC: maximum modulus $= 0.665$ -- shocks decay more rapidly through the system
-
+  SC/BIC: maximum modulus $= 0.665$ -- farther inside the unit circle
 \end{itemize}
+\vspace{0.25em}
+\small
+\textcolor{navyblue}{$\bullet$} Hence, both estimated VARs are dynamically stable, although the AIC specification lies closer to the stability boundary
 
-------------------------------------------------------------------------
+---
 
 ## Residual Diagnostics
 
@@ -1769,21 +1766,26 @@ granger_pairwise_slide$p_value <- format.pval(
 \footnotesize
 \begin{itemize}
 
-\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] For a some variable $x$,
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] For a some variable (or vector in this case) $x$,
 
 \end{itemize}
 
 $$H_0:
-\beta_{x,1}
+\beta_{x_{1},1}
 =
 \cdots
 =
-\beta_{x,p}
+\beta_{x_{1},p}
+=
+\beta_{x_{2},1}
+=
+\cdots
+=\beta_{x_{2},p}
 =
 0$$
 
 $$H_1:
-\beta_{x,j}\neq0
+\beta_{x_{i},j}\neq0
 \quad
 \text{for at least one }j$$
 
@@ -1793,7 +1795,7 @@ $$H_1:
 
 \normalsize
 
-\textcolor{navyblue}{$\bullet$} In a trivariate VAR, \texttt{causality()} tests the chosen variables against the remaining ones jointly
+\textcolor{navyblue}{$\bullet$} In a trivariate VAR, \texttt{causality()} tests the chosen variables against the remaining one jointly
 
 \vspace{0.35em}
 
@@ -1835,6 +1837,23 @@ knitr::kable(
 )
 
 ```
+
+\vspace{-1em}
+\scriptsize
+
+$$H_0:
+\beta_{x,1}
+=
+\cdots
+=
+\beta_{x,p}
+=
+0$$
+
+$$H_1:
+\beta_{x,j}\neq0
+\quad
+\text{for at least one }j$$
 
 
 ```{r}
