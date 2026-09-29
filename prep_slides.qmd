@@ -186,7 +186,7 @@ dat <- dat[order(dat$Date), ]
 
 \normalsize
 
-\textcolor{navyblue}{$\bullet$} The three series capture distinct dimensions of aggregate economic activity
+\textcolor{navyblue}{$\bullet$} The three series aim to capture distinct dimensions of aggregate economic activity
 
 \textcolor{navyblue}{$\bullet$} Following \textit{Bernanke (2005)}, they can be interpreted as:
 
@@ -395,7 +395,7 @@ plot(
   \textit{CPIAUCSL} displays a strong and persistent upward trend
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  \textit{FEDFUNDS} shows persistent movements and substantial variation
+  \textit{FEDFUNDS} shows substantial variation across the sample period
 
 \end{itemize}
 
@@ -748,7 +748,7 @@ unit_root_manual_slide$Delta_2 <- format.pval(
 
 \normalsize
 
-\textcolor{navyblue}{$\bullet$} First, use \texttt{boot\_adf()} directly to the level and successive differences $$y_t\rightarrow \Delta y_t\rightarrow\Delta^2 y_t$$
+\textcolor{navyblue}{$\bullet$} First, use \texttt{boot\_adf()} directly to the level and successive differences $$\Delta^2 y_t\rightarrow \Delta y_t\rightarrow y_t$$
 
 
 \vspace{0.35em}
@@ -1862,7 +1862,7 @@ $$H_1:
 # IRF settings
 
 irf_horizon <- 48
-irf_runs <- 1000
+irf_runs <- 4999
 irf_ci <- 0.95
 
 variables <- c(
@@ -1905,24 +1905,24 @@ upper_ffr <- irf_results$Upper$FFR
 
 # Significance of responses to a policy-rate impulse
 
-ffr_significance <- data.frame(
-  Horizon = 0:irf_horizon,
+#ffr_significance <- data.frame(
+#  Horizon = 0:irf_horizon,
 
-  IP = (
-    lower_ffr[, "IP"] > 0 |
-    upper_ffr[, "IP"] < 0
-  ),
+#  IP = (
+#    lower_ffr[, "IP"] > 0 |
+#    upper_ffr[, "IP"] < 0
+#  ),
 
-  CPI = (
-    lower_ffr[, "CPI"] > 0 |
-    upper_ffr[, "CPI"] < 0
-  ),
+#  CPI = (
+#    lower_ffr[, "CPI"] > 0 |
+#    upper_ffr[, "CPI"] < 0
+#  ),
 
-  FFR = (
-    lower_ffr[, "FFR"] > 0 |
-    upper_ffr[, "FFR"] < 0
-  )
-)
+#  FFR = (
+#    lower_ffr[, "FFR"] > 0 |
+#    upper_ffr[, "FFR"] < 0
+#  )
+#)
 
 
 # Recover point-estimate responses in levels
@@ -2075,15 +2075,20 @@ for (i in seq_along(impulses)) {
     )
 
     axis(
-      1,
-      cex.axis = 0.55
-    )
+    1,
+    at = seq(
+      0,
+      irf_horizon,
+      by = 5
+    ),
+    cex.axis = 0.55
+  )
 
-    axis(
-      2,
-      cex.axis = 0.55
-    )
-
+  axis(
+    2,
+    cex.axis = 0.55
+  )
+  
     # Response labels
     if (i == 1) {
       mtext(
@@ -2251,11 +2256,7 @@ par(mfrow = c(1, 1))
 
 \end{itemize}
 
-\vspace{0.4em}
 
-\normalsize
-
-\textcolor{navyblue}{$\bullet$} The negative IP response is consistent with contractionary dynamics following a positive FFR innovation
 
 ------------------------------------------------------------------------
 
@@ -2274,7 +2275,7 @@ par(mfrow = c(1, 1))
 \begin{itemize}
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  A contractionary monetary-policy shock is followed by an increase in the price level
+  A contractionary monetary-policy innovation (represented by an increase in the FFR) is followed by an increase in the price level
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
   The relevant relationship in our VAR is an FFR impulse and a CPI response
@@ -2447,14 +2448,19 @@ for (i in seq_along(impulses)) {
     )
 
     axis(
-      1,
-      cex.axis = 0.55
-    )
+  1,
+  at = seq(
+    0,
+    irf_horizon,
+    by = 5
+  ),
+  cex.axis = 0.55
+)
 
-    axis(
-      2,
-      cex.axis = 0.55
-    )
+axis(
+  2,
+  cex.axis = 0.55
+)
 
     # Response labels
     if (i == 1) {
@@ -2695,14 +2701,19 @@ for (i in seq_along(impulses)) {
     )
 
     axis(
-      1,
-      cex.axis = 0.55
-    )
+  1,
+  at = seq(
+    0,
+    irf_horizon,
+    by = 5
+  ),
+  cex.axis = 0.55
+)
 
-    axis(
-      2,
-      cex.axis = 0.55
-    )
+axis(
+  2,
+  cex.axis = 0.55
+)
 
     # Response labels
     if (i == 1) {
@@ -2795,13 +2806,13 @@ par(mfrow = c(1, 1))
 \begin{itemize}
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  An IP innovation produces persistent positive responses in industrial production and the CPI level
+  An IP innovation is followed by higher industrial production and a higher CPI level over the horizon
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  A CPI innovation produces persistent cumulative responses in all three level variables
+  A CPI innovation generates cumulative movements across all three variables in levels
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  An FFR innovation produces a persistent negative response in industrial production and a positive response in the CPI level
+  An FFR innovation is associated with lower industrial production and a higher CPI level
 
 \end{itemize}
 
@@ -2828,13 +2839,13 @@ par(mfrow = c(1, 1))
 \begin{itemize}
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  An IP innovation produces persistent positive responses in industrial production and the CPI level
+  An IP innovation is followed by higher industrial production and a higher CPI level over the horizon
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  A CPI innovation produces persistent cumulative responses in all three level variables
+  A CPI innovation generates cumulative movements across all three variables in levels
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  An FFR innovation produces a persistent negative response in industrial production and a positive response in the CPI level
+  An FFR innovation is associated with lower industrial production and a higher CPI level
 
 \end{itemize}
 
@@ -2865,13 +2876,13 @@ par(mfrow = c(1, 1))
 \begin{itemize}
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  An IP innovation produces persistent positive responses in industrial production and the CPI level
+  An IP innovation is followed by higher industrial production and a higher CPI level over the horizon
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  A CPI innovation produces persistent cumulative responses in all three level variables
+  A CPI innovation generates cumulative movements across all three variables in levels
 
   \item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
-  An FFR innovation produces a persistent negative response in industrial production and a positive response in the CPI level
+  An FFR innovation is associated with lower industrial production and a higher CPI level
 
 \end{itemize}
 
