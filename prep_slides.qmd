@@ -104,9 +104,10 @@ execute:
   \item Impulse Response Functions
 \end{enumerate}
 
----
+------------------------------------------------------------------------
 
 # Data Exploration
+
 ## Overview
 
 \normalsize
@@ -520,7 +521,6 @@ plot(
 
 \textcolor{navyblue}{$\Rightarrow$} Still need to formally assess whether the transformed series are stationary
 
-
 ```{r}
 #| include: false
 
@@ -730,8 +730,8 @@ unit_root_manual_slide$Delta_2 <- format.pval(
 ```
 
 # Unit Root Testing
-## Integrated processes
 
+## Integrated processes
 
 \normalsize
 
@@ -796,7 +796,6 @@ knitr::kable(
 
 \textcolor{navyblue}{$\bullet$} We then apply \texttt{boot\_adf()} directly to the level and successive differences $$y_t\rightarrow \Delta y_t\rightarrow\Delta^2 y_t$$
 
-
 \vspace{0.35em}
 
 \scriptsize
@@ -819,7 +818,7 @@ knitr::kable(
 
 ------------------------------------------------------------------------
 
-## CPI: I(1) or I(2)?{.t}
+## CPI: I(1) or I(2)? {.t}
 
 \vspace{1em}
 
@@ -853,7 +852,6 @@ knitr::kable(
 \vspace{0.3em}
 
 \textcolor{navyblue}{$\bullet$} We retain the FRED-MD benchmark transformation $\Delta^2\log(CPI)$ for the VAR
-
 
 ```{r}
 #| echo: false
@@ -1098,14 +1096,14 @@ test_decision <- function(p, alpha = 0.05) {
 ```
 
 # VAR Specification and Model Selection
+
 ## VAR Specification {.t}
 
 \normalsize
 
 \textcolor{navyblue}{$\bullet$} Define the vector of stationary variables as
 
-$$
-\mathbf y_t
+$$\mathbf y_t
 =
 \begin{bmatrix}
 IP_t\\
@@ -1117,8 +1115,7 @@ FFR_t
 \Delta\log(INDPRO_t)\\
 \Delta^2\log(CPIAUCSL_t)\\
 \Delta FEDFUNDS_t
-\end{bmatrix}
-$$
+\end{bmatrix}$$
 
 \vspace{0.45em}
 
@@ -1126,18 +1123,15 @@ $$
 
 \scriptsize
 
-$$
-\boldsymbol{\xi}_t
+$$\boldsymbol{\xi}_t
 =
 \mathbf c^*
 +
 \mathbf F \boldsymbol{\xi}_{t-1}
 +
-\mathbf v_t
-$$
+\mathbf v_t$$
 
-$$
-\boldsymbol{\xi}_t
+$$\boldsymbol{\xi}_t
 =
 \begin{bmatrix}
 \mathbf y_t\\
@@ -1163,13 +1157,11 @@ I_3 & 0   & \cdots & 0       & 0\\
 0   & I_3 & \cdots & 0       & 0\\
 \vdots & \vdots & \ddots & \vdots & \vdots\\
 0   & 0   & \cdots & I_3     & 0
-\end{bmatrix}
-$$
-\footnotesize
+\end{bmatrix}$$ \footnotesize
 
 Here, $\boldsymbol{\xi}_t$ stacks the current and lagged values of the system
 
----
+------------------------------------------------------------------------
 
 ## Lag Order Selection
 
@@ -1215,7 +1207,7 @@ Here, $\boldsymbol{\xi}_t$ stacks the current and lagged values of the system
 
 ------------------------------------------------------------------------
 
-## Information Criteria{.t}
+## Information Criteria {.t}
 
 \vspace{1em}
 
@@ -1255,7 +1247,7 @@ Here, $\boldsymbol{\xi}_t$ stacks the current and lagged values of the system
 
 ------------------------------------------------------------------------
 
-## Lag Selection Results -- Information Criteria{.t}
+## Lag Selection Results -- Information Criteria {.t}
 
 \vspace{1em}
 
@@ -1328,28 +1320,26 @@ cat("\\end{center}\n")
 
 \vspace{0.3em}
 
-$$
-\widehat A_j =
+$$\widehat A_j =
 \begin{bmatrix}
 \hat a_{11,j} & \hat a_{12,j} & \hat a_{13,j}\\
 \hat a_{21,j} & \hat a_{22,j} & \hat a_{23,j}\\
 \hat a_{31,j} & \hat a_{32,j} & \hat a_{33,j}
-\end{bmatrix}
-$$
+\end{bmatrix}$$
 
 \vspace{0.35em}
 
 \footnotesize
 
-\quad [\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] Rows correspond to the $IP$, $CPI$ and $FFR$ equations; columns correspond to lagged $IP$, $CPI$ and $FFR$
+\quad \[\\raise0.15ex\\hbox{\\textcolor{navyblue}{\\tiny\$\\circ\$}}\] Rows correspond to the $IP$, $CPI$ and $FFR$ equations; columns correspond to lagged $IP$, $CPI$ and $FFR$
 
 \vspace{0.3em}
 
-\quad [\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}] Diagonal elements capture own-lag effects, while off-diagonal elements capture cross-variable predictive effects
+\quad \[\\raise0.15ex\\hbox{\\textcolor{navyblue}{\\tiny\$\\circ\$}}\] Diagonal elements capture own-lag effects, while off-diagonal elements capture cross-variable predictive effects
 
 ------------------------------------------------------------------------
 
-## VAR Stability{.t}
+## VAR Stability {.t}
 
 \vspace{1em}
 
@@ -1517,7 +1507,6 @@ cat("\\end{center}\n")
 \begin{itemize}
   \item[\textcolor{navyblue}{$\rightarrow$}]\textbf{Results should be interpreted cautiously given the remaining residual misspecification!}
 \end{itemize}
-
 
 ```{r}
 #| include: false
@@ -1748,6 +1737,7 @@ granger_pairwise_slide$p_value <- format.pval(
 ```
 
 # Granger Causality
+
 ## Granger Causality {.t}
 
 \vspace{1em}
@@ -1835,7 +1825,6 @@ knitr::kable(
 )
 
 ```
-
 
 ```{r}
 #| include: false
@@ -1953,6 +1942,7 @@ irf_ffr_levels <- to_levels(
 ```
 
 # Impulse Response Functions
+
 ## Impulse Response Functions {.t}
 
 \vspace{2em}
@@ -1978,7 +1968,7 @@ irf_ffr_levels <- to_levels(
 
 \end{itemize}
 
----
+------------------------------------------------------------------------
 
 ## IRF Implementation {.t}
 
@@ -2004,9 +1994,9 @@ irf_ffr_levels <- to_levels(
 
 \texttt{\hspace{1em} boot = TRUE)}
 
----
+------------------------------------------------------------------------
 
-## IRF Point Estimates{.t}
+## IRF Point Estimates {.t}
 
 \vspace{-1.8em}
 
@@ -2207,7 +2197,7 @@ par(mfrow = c(1, 1))
 
 ------------------------------------------------------------------------
 
-## Responses to an FFR Innovation{.t}
+## Responses to an FFR Innovation {.t}
 
 \vspace{1em}
 
@@ -2280,7 +2270,7 @@ par(mfrow = c(1, 1))
 
 ------------------------------------------------------------------------
 
-## Bootstrap Confidence Intervals{.t}
+## Bootstrap Confidence Intervals {.t}
 
 \vspace{1em}
 
@@ -2352,7 +2342,7 @@ $$CI_h^{95\%}
 
 ------------------------------------------------------------------------
 
-## IRFs with 95% Bootstrap Bands{.t}
+## IRFs with 95% Bootstrap Bands {.t}
 
 \vspace{-1.8em}
 
@@ -2620,7 +2610,7 @@ $$
 
 ------------------------------------------------------------------------
 
-## IRFs Reconstructed in Levels{.t}
+## IRFs Reconstructed in Levels {.t}
 
 \vspace{-1.8em}
 
@@ -2901,9 +2891,9 @@ par(mfrow = c(1, 1))
 
 The present IRFs are informative about dynamic propagation, but causal structural interpretation requires an identified structural VAR
 
----
+------------------------------------------------------------------------
 
-## {.plain}
+##  {.plain}
 
 \vfill
 

@@ -285,14 +285,17 @@ unit_root_table
 
 urip1 <- boot_adf(diff(diff(IP)), deterministics = "intercept", B = B)
 urip2 <- boot_adf(diff(IP), deterministics = "intercept", B = B)
+urip22 <- boot_adf(diff(IP), deterministics = "trend", B = B)
 urip3 <- boot_adf(IP, deterministics = "trend", B = B)
 
 urcpi1 <- boot_adf(diff(diff(CPI)), deterministics = "intercept", B = B)
 urcpi2 <- boot_adf(diff(CPI), deterministics = "intercept", B = B)
+urcpi22 <- boot_adf(diff(CPI), deterministics = "trend", B = B)
 urcpi3 <- boot_adf(CPI, deterministics = "trend", B = B)
 
 urffr1 <- boot_adf(diff(diff(FFR)), deterministics = "intercept", B = B)
 urffr2 <- boot_adf(diff(FFR), deterministics = "intercept", B = B)
+urffr22 <- boot_adf(diff(FFR), deterministics = "trend", B = B)
 urffr3 <- boot_adf(FFR, deterministics = "trend", B = B)
 
 unit_root_table_manual <- data.frame(
@@ -308,10 +311,16 @@ unit_root_table_manual <- data.frame(
     urffr1$p.value
   ),
   
-  Delta_1_P = c(
+  Delta_1_I = c(
     urip2$p.value,
     urcpi2$p.value,
     urffr2$p.value
+  ),
+  
+  Delta_1_T = c(
+    urip22$p.value,
+    urcpi22$p.value,
+    urffr22$p.value
   ),
   
   Delta_0_P = c(

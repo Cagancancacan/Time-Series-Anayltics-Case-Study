@@ -159,9 +159,13 @@ plot(d2ip, type = "l", main = "d=2")
 
 d2cpi <- diff(diff(tcpi))
 d1cpi <- diff(tcpi)
+set.seed(123)
+B <- 4999
 
-boot_adf(d2cpi, deterministics = "intercept")
-boot_adf(d1cpi, deterministics = "intercept")
+boot_adf(d1cpi, deterministics = "trend",B=B)
+boot_adf(d1cpi, deterministics = "intercept",B=B)
+
+boot_adf(d2cpi, deterministics = "trend")
 boot_adf(tcpi, deterministics = "trend")
 
 
