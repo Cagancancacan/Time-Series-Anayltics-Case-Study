@@ -718,3 +718,22 @@ CPI –\> IP: p\>0.05, therefore accept H0. CPI does not help predict future IP.
 CPI –\> FFR: p\>0.05, therefore accept H0. CPI does not help predict future FFR.\
 \
 Industrial production (IP) helps predict future federal fund rates (FFR). Fund rates impact future price levels (CPI).
+
+### 14. IRFs for recursive SVARs
+
+We start by the following ordering: IP –\> CPI –\> FFR. IP and CPI are sluggish. Due to physical constraints in production and price stickiness, these variables do not react to monetary policy shocks within the exact same time period. We put FFR at the bottom, because central banks usually monitor prices and output and adjust fund rates based on these observations.
+
+```{r}
+# First we need to define the structural restriction matrix (A). This matrix defines instantaneous causal relationships by imposing constraints.
+# The order of columns/rows corresponds to the order in our reduced VAR: 1=IP, 2=CPI, 3=FFR
+amat_baseline <- diag(3)
+amat_baseline[2, 1] <- NA  # CPI can respond to IP contemporaneously
+amat_baseline[3, 1] <- NA  # FFR can respond to IP contemporaneously
+amat_baseline[3, 2] <- NA  # FFR can respond to CPI contemporaneously
+
+# Pass the previously estimated reduced-form VAR (fit_aic) and our A baseline.
+svar_baseline <- SVAR(fit_aic, estmethod = "direct", Amat = amat_baseline)
+
+# Estimated contemporaneous coefficients
+summary(svar_baseline)
+```
