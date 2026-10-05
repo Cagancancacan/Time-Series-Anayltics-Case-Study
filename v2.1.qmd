@@ -745,7 +745,7 @@ summary(svar_baseline)
 
 # Plot IFFs 24 months ahead with 95% bootstrapped confidence intervals.
 # Lowering 'runs' to 50 cuts the processing time in half
-irf_svar_baseline <- irf(svar_baseline, n.ahead = 24, ci = 0.95, boot = TRUE, runs = 10)
+irf_svar_baseline <- irf(svar_baseline, n.ahead = 24, ci = 0.95, boot = TRUE)
 plot(irf_svar_baseline)
 # Bootstrap to determine confidence interval instead of point estimates.
 # n = 24: it takes time for monetary policy adjustments to propagate through the economy
