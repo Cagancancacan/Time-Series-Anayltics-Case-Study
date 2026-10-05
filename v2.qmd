@@ -7,13 +7,8 @@ editor: visual
 ### 0. Settings
 
 ```{r}
-<<<<<<< HEAD
 # install.packages(c("bootUR", "vars"))
 # install.packages("lpirfs")
-=======
-# install.packages(c("bootUR", "vars", "car"))
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 library(bootUR)
 library(vars)
 library(car)
@@ -447,7 +442,6 @@ lag_criteria
 ### 9. Estimation VAR models
 
 ```{r}
-
 fit_aic <- VAR(
   x,
   p = p_aic,
@@ -463,14 +457,12 @@ fit_bic <- VAR(
 c(
   AIC_selected_lag = p_aic,
   BIC_selected_lag = p_bic
-  
 )
 ```
 
 ### 10. VAR stability
 
 ```{r}
-
 roots_aic <- roots(
   fit_aic,
   modulus = TRUE
@@ -667,8 +659,7 @@ diag_aic$normality_test
 diag_bic$normality_test
 ```
 
-<<<<<<< HEAD
-### 13.  Granger
+### 13. Granger
 
 ```{r}
 #install.packages("car")
@@ -679,14 +670,6 @@ library(car)
 #alpha <- 0.05
 
 
-=======
-### 13. Granger causality
-
-```{r}
-
-# Granger causality
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 # CPI and FFR -> IP
 gc_IP <- causality(
   fit_aic,
@@ -739,16 +722,8 @@ granger_block_table$Decision <- ifelse(
   "Do not reject H0"
 )
 
-<<<<<<< HEAD
 
 
-=======
-```
-
-### 14. Conditional pairwise Granger causality
-
-```{r}
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 # Six (conditional) pairwise tests
 
 
@@ -879,15 +854,7 @@ granger_pairwise_table$Decision <- ifelse(
   "Do not reject H0"
 )
 
-<<<<<<< HEAD
 
-=======
-```
-
-### 15. Granger tables
-
-```{r}
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 
 # Tables
 
@@ -920,7 +887,6 @@ granger_pairwise_slide$p_value <- format.pval(
 
 ```
 
-<<<<<<< HEAD
 ```{r}
 #| echo: false
 #| results: asis
@@ -947,25 +913,15 @@ knitr::kable(
 
 ```
 
-### 14.  IRFs in reduced VAR form
+### 14. IRFs in reduced VAR form
 
 ```{r}
 #| include: false
-=======
-
-### 16. Impulse response functions
-
-```{r}
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 
 # IRF settings
 
 irf_horizon <- 48
-<<<<<<< HEAD
 irf_runs <- 1000
-=======
-irf_runs <- 4999
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 irf_ci <- 0.95
 
 variables <- c(
@@ -1006,7 +962,6 @@ upper_cpi <- irf_results$Upper$CPI
 upper_ffr <- irf_results$Upper$FFR
 
 
-<<<<<<< HEAD
 # Significance of responses to a policy-rate impulse
 
 ffr_significance <- data.frame(
@@ -1028,19 +983,11 @@ ffr_significance <- data.frame(
   )
 )
 
-=======
-```
-
-### 17. Recovering IRFs in levels
-
-```{r}
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 
 # Recover point-estimate responses in levels
 
 # Variables in the estimated VAR:
 
-<<<<<<< HEAD
 # IP  = Δ log(INDPRO)       -> accumulate once
 # CPI = Δ² log(CPIAUCSL)    -> accumulate twice
 # FFR = Δ FEDFUNDS          -> accumulate once
@@ -1054,31 +1001,12 @@ to_levels <- function(irf_matrix) {
       irf_matrix[, "IP"]
     ),
     
-=======
-# IP  = difflog(INDPRO)       -> accumulate once
-# CPI = diff2log(CPIAUCSL)    -> accumulate twice
-# FFR = diffFEDFUNDS          -> accumulate once
-
-to_levels <- function(irf_matrix) {
-
-  data.frame(
-    Horizon = 0:(nrow(irf_matrix) - 1),
-
-    IP = cumsum(
-      irf_matrix[, "IP"]
-    ),
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     CPI = cumsum(
       cumsum(
         irf_matrix[, "CPI"]
       )
     ),
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     FFR = cumsum(
       irf_matrix[, "FFR"]
     )
@@ -1102,11 +1030,6 @@ irf_ffr_levels <- to_levels(
 
 ```
 
-<<<<<<< HEAD
-=======
-### 18. IRF points estimates
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 ```{r}
 
 impulses <- c("IP", "CPI", "FFR")
@@ -1120,7 +1043,6 @@ par(
 )
 
 for (i in seq_along(impulses)) {
-<<<<<<< HEAD
   
   impulse <- impulses[i]
   
@@ -1131,18 +1053,6 @@ for (i in seq_along(impulses)) {
     y <- irf_results$irf[[impulse]][, response]
     horizon <- 0:(length(y) - 1)
     
-=======
-
-  impulse <- impulses[i]
-
-  for (j in seq_along(responses)) {
-
-    response <- responses[j]
-
-    y <- irf_results$irf[[impulse]][, response]
-    horizon <- 0:(length(y) - 1)
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     plot(
       horizon,
       y,
@@ -1154,39 +1064,23 @@ for (i in seq_along(impulses)) {
       axes = FALSE,
       lwd = 1.2
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     abline(
       h = 0,
       lty = 2,
       col = "grey40"
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     axis(
       1,
       cex.axis = 0.55
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     axis(
       2,
       cex.axis = 0.55
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     # Response labels
     if (i == 1) {
       mtext(
@@ -1259,7 +1153,6 @@ mtext(
 )
 
 par(mfrow = c(1, 1))
-<<<<<<< HEAD
 ```
 
 With confidence bands:
@@ -1269,14 +1162,6 @@ With confidence bands:
 #| fig-width: 7.0
 #| fig-height: 5.0
 #| fig-align: center
-=======
-
-```
-
-### 19. IRFs with bootstrap CBs
-
-```{r}
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 
 impulses <- c("IP", "CPI", "FFR")
 responses <- c("IP", "CPI", "FFR")
@@ -1289,7 +1174,6 @@ par(
 )
 
 for (i in seq_along(impulses)) {
-<<<<<<< HEAD
   
   impulse <- impulses[i]
   
@@ -1307,25 +1191,6 @@ for (i in seq_along(impulses)) {
       c(lower, upper, point, 0)
     )
     
-=======
-
-  impulse <- impulses[i]
-
-  for (j in seq_along(responses)) {
-
-    response <- responses[j]
-
-    point <- irf_results$irf[[impulse]][, response]
-    lower <- irf_results$Lower[[impulse]][, response]
-    upper <- irf_results$Upper[[impulse]][, response]
-
-    horizon <- 0:(length(point) - 1)
-
-    plot_range <- range(
-      c(lower, upper, point, 0)
-    )
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     # Empty plotting region
     plot(
       horizon,
@@ -1337,11 +1202,7 @@ for (i in seq_along(impulses)) {
       main = "",
       axes = FALSE
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     # 95% bootstrap confidence interval
     polygon(
       c(horizon, rev(horizon)),
@@ -1352,51 +1213,31 @@ for (i in seq_along(impulses)) {
       ),
       border = NA
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     # Zero line
     abline(
       h = 0,
       lty = 3,
       col = "grey40"
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     # Point estimate
     lines(
       horizon,
       point,
       lwd = 1.2
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     axis(
       1,
       cex.axis = 0.55
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     axis(
       2,
       cex.axis = 0.55
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     # Response labels
     if (i == 1) {
       mtext(
@@ -1469,7 +1310,6 @@ mtext(
 )
 
 par(mfrow = c(1, 1))
-<<<<<<< HEAD
 ```
 
 Back to levels:
@@ -1479,28 +1319,16 @@ Back to levels:
 #| fig-width: 7.0
 #| fig-height: 5.0
 #| fig-align: center
-=======
-
-```
-
-
-### 20. IRFs reconstructed in levels
-
-```{r}
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 
 impulses <- c("IP", "CPI", "FFR")
 responses <- c("IP", "CPI", "FFR")
 
-<<<<<<< HEAD
 level_irfs <- list(
   IP = irf_ip_levels,
   CPI = irf_cpi_levels,
   FFR = irf_ffr_levels
 )
 
-=======
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
 par(
   mfrow = c(3, 3),
   mar = c(1.3, 2.2, 1.2, 0.4),
@@ -1509,7 +1337,6 @@ par(
 )
 
 for (i in seq_along(impulses)) {
-<<<<<<< HEAD
   
   impulse <- impulses[i]
   
@@ -1538,80 +1365,16 @@ for (i in seq_along(impulses)) {
       col = "grey40"
     )
     
-=======
-
-  impulse <- impulses[i]
-
-  for (j in seq_along(responses)) {
-
-    response <- responses[j]
-
-    point <- irf_results$irf[[impulse]][, response]
-    lower <- irf_results$Lower[[impulse]][, response]
-    upper <- irf_results$Upper[[impulse]][, response]
-
-    horizon <- 0:(length(point) - 1)
-
-    plot_range <- range(
-      c(lower, upper, point, 0)
-    )
-
-    # Empty plotting region
-    plot(
-      horizon,
-      point,
-      type = "n",
-      ylim = plot_range,
-      xlab = "",
-      ylab = "",
-      main = "",
-      axes = FALSE
-    )
-
-    # 95% bootstrap confidence interval
-    polygon(
-      c(horizon, rev(horizon)),
-      c(lower, rev(upper)),
-      col = adjustcolor(
-        "grey70",
-        alpha.f = 0.45
-      ),
-      border = NA
-    )
-
-    # Zero line
-    abline(
-      h = 0,
-      lty = 3,
-      col = "grey40"
-    )
-
-    # Point estimate
-    lines(
-      horizon,
-      point,
-      lwd = 1.2
-    )
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     axis(
       1,
       cex.axis = 0.55
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     axis(
       2,
       cex.axis = 0.55
     )
-<<<<<<< HEAD
     
-=======
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
     # Response labels
     if (i == 1) {
       mtext(
@@ -1684,7 +1447,6 @@ mtext(
 )
 
 par(mfrow = c(1, 1))
-<<<<<<< HEAD
 ```
 
 ### 15. Local Projections in reduced VAR form
@@ -1726,10 +1488,4 @@ plot(lp_level)
 plot(lp_trans)
 par(mfrow=c(3,3))
 plot(irf_orth)
-summary(lp_ip)
 ```
-=======
-
-```
-
->>>>>>> efe377476f3675cdfeb54872c8e8029a9da3160f
