@@ -1,0 +1,1350 @@
+---
+title: "Case 2: Structural Vector AutoRegressive Models, Local Projections and Macro-economic Policy Analysis"
+subtitle: "EBC4008 -- Time Series Analytics"
+author:
+  - "Can Idil"
+  - "Sem Huizinga"
+  - "Juan Diego Gaviño"
+format:
+  beamer:
+    slide-level: 2
+    header-includes:
+      - |
+        \definecolor{navyblue}{RGB}{10,32,72}
+
+        \setbeamertemplate{navigation symbols}{}
+
+        % Main presentation colors
+        \setbeamercolor{normal text}{fg=navyblue,bg=white}
+        \setbeamercolor{frametitle}{fg=navyblue}
+        \setbeamercolor{structure}{fg=navyblue}
+
+        % Header/footer colors
+        \setbeamercolor{headlinebar}{bg=navyblue,fg=white}
+        \setbeamercolor{footlinebar}{bg=navyblue,fg=white}
+
+        % Header
+        \setbeamertemplate{headline}{
+          \leavevmode
+          \begin{beamercolorbox}[
+            wd=\paperwidth,
+            ht=3.5ex,
+            dp=1.0ex
+          ]{headlinebar}
+
+            \hbox to \paperwidth{%
+
+              % Left: current section
+              \rlap{%
+                \hspace{1em}
+                \scriptsize \insertsectionhead
+              }%
+
+              \hfill
+
+              % Right
+              \llap{%
+                \scriptsize Case 2
+                \hspace{1em}
+              }%
+            }
+
+          \end{beamercolorbox}
+        }
+
+        % Footer
+        \setbeamertemplate{footline}{
+          \leavevmode
+          \begin{beamercolorbox}[
+            wd=\paperwidth,
+            ht=2.8ex,
+            dp=1.0ex
+          ]{footlinebar}
+
+            \hbox to \paperwidth{%
+
+              % Left
+              \rlap{%
+                \hspace{1em}
+                \tiny Maastricht University
+              }%
+
+              \hfill
+
+              % Exact center
+              \tiny EBC4008 -- Time Series Analytics
+
+              \hfill
+
+              % Right
+              \llap{%
+                \tiny \insertframenumber{} / \inserttotalframenumber
+                \hspace{1em}
+              }%
+            }
+
+          \end{beamercolorbox}
+        }
+editor: visual
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Table of Contents {.t}
+
+\normalsize
+
+\begin{enumerate}
+  \item Structural VARs
+  \item Impulse Response Functions for recursive SVARs
+  \item VAR/LP IRFs Comparison
+  \item Structural IRFs using LP
+  \item Shock Proxies
+\end{enumerate}
+
+
+
+
+
+```{r}
+#| include: false
+
+library(vars)
+library(lpirfs)
+
+set.seed(123)
+
+# Data preparation
+raw <- read.csv("v2-2026-rev-08-MD.csv", check.names = FALSE)
+
+dat <- raw[, c("sasdate", "INDPRO", "CPIAUCSL", "FEDFUNDS")]
+names(dat)[1] <- "Date"
+
+dat$Date <- as.Date(dat$Date, format = "%m/%d/%Y")
+dat <- dat[!is.na(dat$Date) & dat$Date <= as.Date("2019-12-31"), ]
+dat <- dat[order(dat$Date), ]
+
+# Transformations
+dat_transformed <- data.frame(
+  Date = dat$Date,
+  INDPRO = c(NA, diff(log(dat$INDPRO))),
+  CPIAUCSL = c(NA, NA, diff(log(dat$CPIAUCSL), differences = 2)),
+  FEDFUNDS = c(NA, diff(dat$FEDFUNDS))
+)
+
+dat_transformed <- dat_transformed[-c(1, 2), ]
+
+Y <- data.frame(
+  Date = dat_transformed$Date,
+  IP = dat_transformed$INDPRO,
+  CPI = dat_transformed$CPIAUCSL,
+  FFR = dat_transformed$FEDFUNDS
+)
+
+variables <- c("IP", "CPI", "FFR")
+x <- as.matrix(Y[, variables])
+
+stopifnot(all(is.finite(x)))
+
+# Reduced-form VAR
+p_aic <- 14
+fit_aic <- VAR(x, p = p_aic, type = "const")
+
+irf_horizon <- 48
+
+irf_reduced <- irf(
+  fit_aic,
+  impulse = variables,
+  response = variables,
+  n.ahead = irf_horizon,
+  ortho = FALSE,
+  boot = FALSE
+)
+
+# IRFs in levels
+to_levels <- function(irf_matrix) {
+  data.frame(
+    Horizon = 0:(nrow(irf_matrix) - 1),
+    IP = cumsum(irf_matrix[, "IP"]),
+    CPI = cumsum(cumsum(irf_matrix[, "CPI"])),
+    FFR = cumsum(irf_matrix[, "FFR"])
+  )
+}
+
+policy_reduced_levels <- to_levels(
+  irf_reduced$irf$FFR[, variables, drop = FALSE]
+)
+
+# IRF comparison plots
+plot_comparison <- function(data_list, labels,
+                            line_types = seq_along(data_list)) {
+
+  responses <- c("IP", "CPI", "FFR")
+
+  oldpar <- par(no.readonly = TRUE)
+  on.exit({
+    layout(1)
+    par(oldpar)
+  })
+
+  layout(
+    matrix(c(1, 2, 3, 4, 4, 4), nrow = 2, byrow = TRUE),
+    heights = c(5, 0.65)
+  )
+
+  par(
+    mar = c(2.8, 3.0, 1.8, 0.5),
+    oma = c(1.5, 0, 0, 0),
+    pty = "s",
+    cex = 0.8
+  )
+
+  for (j in seq_along(responses)) {
+
+    response <- responses[j]
+    horizon <- data_list[[1]]$Horizon
+
+    all_y <- unlist(lapply(
+      data_list,
+      function(z) z[[response]]
+    ))
+
+    plot(
+      horizon,
+      data_list[[1]][[response]],
+      type = "l",
+      ylim = range(c(all_y, 0)),
+      xlab = "",
+      ylab = "",
+      main = response,
+      axes = FALSE,
+      lwd = 1.4,
+      lty = line_types[1]
+    )
+
+    if (length(data_list) > 1) {
+      for (i in 2:length(data_list)) {
+        lines(
+          data_list[[i]]$Horizon,
+          data_list[[i]][[response]],
+          lwd = 1.4,
+          lty = line_types[i]
+        )
+      }
+    }
+
+    abline(h = 0, lty = 3, col = "grey40")
+
+    axis(
+      1,
+      at = seq(0, irf_horizon, by = 12),
+      cex.axis = 0.7
+    )
+
+    axis(2, cex.axis = 0.7)
+  }
+
+  # Shared legend
+  par(mar = c(0, 0, 0, 0), pty = "m")
+  plot.new()
+
+  legend(
+    "center",
+    legend = labels,
+    lty = line_types,
+    lwd = 1.4,
+    horiz = TRUE,
+    bty = "n",
+    cex = 0.85
+  )
+
+  mtext(
+    "Horizon (months)",
+    side = 1,
+    outer = TRUE,
+    line = 0.2,
+    cex = 0.8
+  )
+}
+```
+
+
+
+## Recap -- Part I {.t}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Reduced-form VAR(14) was estimated for
+
+\footnotesize
+$$
+\Delta\log(INDPRO_t),\qquad
+\Delta^2\log(CPI_t),\qquad
+\Delta FFR_t
+$$
+
+\vspace{0.35em}
+
+\normalsize
+\textcolor{navyblue}{$\bullet$} Reduced-form IRFs were computed over 48 months with bootstrap confidence intervals
+
+\vspace{0.35em}
+
+\textcolor{navyblue}{$\bullet$} The responses were accumulated to recover the variables in levels
+
+\vspace{0.35em}
+
+\textcolor{navyblue}{$\bullet$} A positive FFR innovation is followed by an increase in the CPI level, producing a price-puzzle-like pattern
+
+\vspace{0.35em}
+
+\centering
+
+\normalsize
+\textcolor{navyblue}{$\Rightarrow$} \textit{FFR innovation is \textbf{not yet structurally identified}, motivating the \textbf{SVAR} analysis}
+
+
+# Structural VARs
+
+## Reduced-Form VAR versus Structural VAR {.t}
+
+\vspace{0.5em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Reduced-form VAR: statistical dynamics and forecast errors
+
+\vspace{-0.8em}
+
+\footnotesize
+$$
+y_t=A_1y_{t-1}+\cdots+A_py_{t-p}+u_t
+$$
+
+\vspace{0.15em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Structural VAR: contemporaneous relationships and economic shocks
+
+\vspace{-1.5em}
+
+\footnotesize
+$$
+B_0y_t=B_1y_{t-1}+\cdots+B_py_{t-p}+w_t
+$$
+
+\vspace{-0.3em}
+
+\scriptsize
+$$
+A_i=B_0^{-1}B_i,
+\qquad
+u_t=B_0^{-1}w_t,
+\qquad
+E(w_tw_t')=I_K
+$$
+
+\vspace{0.3em}
+
+\footnotesize
+
+\begin{itemize}
+
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+$u_t$ may combine several underlying economic disturbances
+
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+$B_0$ captures contemporaneous relationships; $w_t$ is the vector of structural shocks
+
+\end{itemize}
+
+\footnotesize
+\underline{Objective:} Recover economically interpretable shocks from the reduced-form errors
+
+---
+
+
+## From Reduced-Form to Structural VAR {.t}
+
+\vspace{0.8em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Premultiplying the reduced-form companion VAR by $\mathcal B_0$ yields the structural representation
+
+\vspace{0.3em}
+
+\small
+$$
+\mathcal B_0Y_t
+=
+\underbrace{\mathcal B_0 A}_{\mathcal B_1}
+Y_{t-1}
++
+\underbrace{\mathcal B_0 U_t}_{W_t}
+$$
+
+\vspace{0.3em}
+
+
+
+\small where \quad \scriptsize $Y_t,U_t,W_t\in\mathbb R^{Kp}$, $A,\mathcal B_0,\mathcal B_1\in\mathbb R^{Kp\times Kp}$, and $\mathcal B_0=\operatorname{diag}(B_0,I_K,\ldots,I_K)$.
+
+\vspace{0.8em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Both representations describe the same dynamics, but the structural interpretation depends on identifying $B_0$
+
+
+## Identification Problem {.t}
+
+\vspace{0.5em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} The reduced-form covariance matrix provides information about $B_0^{-1}$
+
+\vspace{-1.5em}
+
+\footnotesize
+$$
+\Sigma_u=B_0^{-1}(B_0^{-1})'
+$$
+
+\vspace{0.25em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} However, it provides fewer independent equations than unknown coefficients
+
+\vspace{-0.7em}
+
+\footnotesize
+$$
+\underbrace{K^2}_{\text{Unknowns}}
+-
+\underbrace{\frac{K(K+1)}{2}}_{\text{Equations}}
+=
+\underbrace{\frac{K(K-1)}{2}}_{\text{Restrictions}}
+$$
+
+\vspace{0.25em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} For the trivariate VAR:
+
+\vspace{-0.7em}
+
+\footnotesize
+$$
+9-6=\boxed{3\text{ restrictions}}
+$$
+
+\vspace{0.35em}
+
+\normalsize
+
+\textcolor{navyblue}{$\Rightarrow$} At least three independent restrictions are needed; the rank condition must also hold
+
+
+---
+
+## Types of Identification Restrictions {.t}
+
+\vspace{0.5em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Structural restrictions can constrain the effects of shocks at different horizons
+
+\vspace{0.2em}
+
+\footnotesize
+\begin{itemize}
+
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+\textbf{Short-run:} zero, equality or proportionality restrictions on contemporaneous coefficients
+
+\vspace{0.15em}
+
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+\textbf{Long-run:} restrictions on cumulative or permanent effects of structural shocks
+
+\vspace{0.15em}
+
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+\textbf{Sign:} restrictions on the direction of responses over selected horizons
+
+\end{itemize}
+
+\vspace{0.3em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Economic justification may arise from theory, information delays, physical constraints or institutional knowledge
+
+\vspace{0.3em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Here: Short-run exclusion restrictions to identify monetary-policy shocks
+
+
+
+# Impulse Response Functions for Recursive SVARs
+
+```{r}
+#| include: false
+
+# Recursive identification
+Bmat_recursive <- matrix(NA_real_, 3, 3)
+Bmat_recursive[upper.tri(Bmat_recursive)] <- 0
+
+# Baseline: IP, CPI, FFR
+svar_recursive <- SVAR(
+  fit_aic,
+  Bmat = Bmat_recursive,
+  lrtest = FALSE
+)
+
+irf_svar <- irf(
+  svar_recursive,
+  impulse = "FFR",
+  response = variables,
+  n.ahead = irf_horizon,
+  boot = FALSE
+)
+
+# Alternative: CPI, IP, FFR
+order_swap <- c("CPI", "IP", "FFR")
+
+fit_swap <- VAR(
+  x[, order_swap, drop = FALSE],
+  p = p_aic,
+  type = "const"
+)
+
+svar_swap <- SVAR(
+  fit_swap,
+  Bmat = Bmat_recursive,
+  lrtest = FALSE
+)
+
+irf_swap <- irf(
+  svar_swap,
+  impulse = "FFR",
+  response = variables,
+  n.ahead = irf_horizon,
+  boot = FALSE
+)
+
+# Alternative: FFR, IP, CPI
+order_first <- c("FFR", "IP", "CPI")
+
+fit_first <- VAR(
+  x[, order_first, drop = FALSE],
+  p = p_aic,
+  type = "const"
+)
+
+svar_first <- SVAR(
+  fit_first,
+  Bmat = Bmat_recursive,
+  lrtest = FALSE
+)
+
+irf_first <- irf(
+  svar_first,
+  impulse = "FFR",
+  response = variables,
+  n.ahead = irf_horizon,
+  boot = FALSE
+)
+
+# Orient monetary-policy shocks
+orient_policy <- function(irf_matrix) {
+  if (irf_matrix[1, "FFR"] < 0) {
+    irf_matrix <- -irf_matrix
+  }
+  irf_matrix
+}
+
+# Responses in levels
+policy_svar_levels <- to_levels(
+  orient_policy(irf_svar$irf$FFR[, variables, drop = FALSE])
+)
+
+policy_swap_levels <- to_levels(
+  orient_policy(irf_swap$irf$FFR[, variables, drop = FALSE])
+)
+
+policy_first_levels <- to_levels(
+  orient_policy(irf_first$irf$FFR[, variables, drop = FALSE])
+)
+```
+
+
+
+
+## Recursive Identification through Ordering {.t}
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Recursive identification imposes a lower-triangular structural impact matrix
+
+\vspace{-0.6em}
+
+\footnotesize
+$$
+u_t=
+\underbrace{
+\begin{bmatrix}
+b_{11}^{0}&0&0\\
+b_{21}^{0}&b_{22}^{0}&0\\
+b_{31}^{0}&b_{32}^{0}&b_{33}^{0}
+\end{bmatrix}
+}_{B_0^{-1}}
+w_t
+$$
+
+\vspace{0.2em}
+
+\footnotesize
+
+\quad\textcolor{navyblue}{\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}} The three zeros satisfy the order condition for $K=3$; the Cholesky decomposition selects the corresponding lower-triangular impact matrix
+
+\vspace{0.35em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Structural impulse responses are obtained from the reduced-form responses
+
+\vspace{-1.3em}
+
+\footnotesize
+$$
+\Theta_h=\Phi_hB_0^{-1},
+\qquad h=0,\ldots,H
+$$
+
+\vspace{0.25em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} The ordering determines which shocks can affect each variable contemporaneously
+
+---
+
+
+## Ordering the Monetary-Policy VAR {.t}
+
+\vspace{0.55em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} We adopt the ordering
+
+\vspace{-0.65em}
+
+\footnotesize
+$$
+y_t=(IP_t,\ CPI_t,\ FFR_t)'
+$$
+
+\vspace{0.3em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Economic motivation:
+
+\vspace{0.15em}
+
+\footnotesize
+\begin{itemize}
+
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+\textbf{IP and CPI:} assumed not to respond within the month to unexpected monetary-policy changes
+
+\vspace{0.2em}
+
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+\textbf{FFR:} allowed to react contemporaneously to real activity and price developments
+
+\end{itemize}
+
+\vspace{0.35em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} The last innovation is interpreted as the monetary-policy shock
+
+\vspace{-0.7em}
+
+\footnotesize
+$$
+w_{3t}\equiv w_t^{MP}
+$$
+
+\vspace{0.25em}
+
+\small
+
+\quad\textcolor{navyblue}{$\Rightarrow$} Only the policy shock is assigned an economic interpretation (semistructural SVAR)
+
+---
+
+
+## Estimating Recursive SVAR IRFs {.t}
+
+\vspace{0.7em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} We use \texttt{SVAR()} with recursive zero restrictions on the structural impact matrix
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} \texttt{irf()} computes structural responses from the VAR(14) over 48 months
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Structural shocks have unit variance and are oriented to raise FFR on impact
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Responses are accumulated to recover levels
+
+\vspace{0.55em}
+
+\normalsize
+
+\textcolor{navyblue}{$\Rightarrow$} The figures compare point estimates across identification assumptions
+
+---
+
+
+## Structural Monetary-Policy IRFs
+
+```{r}
+#| echo: false
+#| fig-width: 9.0
+#| fig-height: 3.7
+
+
+plot_comparison(
+  list(
+    policy_reduced_levels,
+    policy_svar_levels
+  ),
+  labels = c(
+    "Reduced-form VAR",
+    "SVAR"
+  ),
+  line_types = c(4, 1)
+)
+```
+
+---
+
+## Structural Monetary-Policy IRFs {.t}
+
+\vspace{0.65em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} With FFR ordered last, structural and reduced-form policy IRFs are proportional
+
+\vspace{-0.7em}
+
+\footnotesize
+$$
+\Theta_h e_3=b_{33}^{0}\Phi_h e_3
+$$
+
+\vspace{0.4em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Both curves have identical profiles; their magnitudes differ through shock normalization
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} IP declines, while the CPI level rises following a positive FFR shock
+
+\vspace{0.55em}
+
+\normalsize
+
+\textcolor{navyblue}{$\Rightarrow$} The price-puzzle pattern persists under recursive identification
+
+---
+
+
+## Ordering Sensitivity
+
+
+```{r}
+#| echo: false
+#| fig-width: 9.0
+#| fig-height: 3.7
+
+plot_comparison(
+  list(
+    policy_svar_levels,
+    policy_swap_levels,
+    policy_first_levels
+  ),
+  labels = c(
+    "IP, CPI, FFR",
+    "CPI, IP, FFR",
+    "FFR, IP, CPI"
+  ),
+  line_types = c(1, 3, 5)
+)
+```
+
+---
+
+## Ordering Sensitivity {.t}
+
+\vspace{0.65em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} \textbf{FFR last:} Swapping IP and CPI leaves the monetary-policy IRFs unchanged
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} \textbf{FFR first:} IP and CPI can respond immediately to policy shocks, changing the estimated responses
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Unit-variance structural shocks can also produce different FFR impact magnitudes across orderings
+
+\vspace{0.55em}
+
+\normalsize
+
+\textcolor{navyblue}{$\Rightarrow$} Ordering comparisons reveal sensitivity, but may represent different causal experiments
+
+
+
+# VAR/LP IRFs Comparison
+
+```{r}
+#| include: false
+
+# Reduced-form local projections
+lp_irfs <- array(
+  NA_real_,
+  dim = c(irf_horizon + 1, 3, 3),
+  dimnames = list(NULL, variables, variables)
+)
+
+for (h in 0:irf_horizon) {
+
+  idx <- (p_aic + 1):(nrow(x) - h)
+
+  X_h <- cbind(
+    1,
+    x[idx, , drop = FALSE]
+  )
+
+  for (lag in 1:p_aic) {
+    X_h <- cbind(
+      X_h,
+      x[idx - lag, , drop = FALSE]
+    )
+  }
+
+  fit_h <- lm.fit(
+    X_h,
+    x[idx + h, , drop = FALSE]
+  )
+
+  lp_irfs[h + 1, , ] <- t(
+    fit_h$coefficients[2:4, , drop = FALSE]
+  )
+}
+
+# LP responses in levels
+lp_all_levels <- setNames(
+  lapply(variables, function(v) {
+    to_levels(lp_irfs[, , v])
+  }),
+  variables
+)
+
+# VAR responses in levels
+var_all_levels <- setNames(
+  lapply(variables, function(v) {
+    to_levels(
+      irf_reduced$irf[[v]][, variables, drop = FALSE]
+    )
+  }),
+  variables
+)
+
+# 3x3 VAR-LP comparison
+plot_var_lp_grid <- function() {
+
+  oldpar <- par(no.readonly = TRUE)
+  on.exit({
+    layout(1)
+    par(oldpar)
+  })
+
+  layout(
+    matrix(c(
+      1, 2, 3,
+      4, 5, 6,
+      7, 8, 9,
+      10, 10, 10
+    ), nrow = 4, byrow = TRUE),
+    heights = c(1, 1, 1, 0.35),
+    respect = FALSE
+  )
+
+  par(
+    mar = c(1.6, 2.4, 1.1, 0.3),
+    oma = c(0.3, 3.0, 2.1, 0.2),
+    pty = "m",
+    cex = 0.8,
+    mgp = c(1.3, 0.3, 0)
+  )
+
+  for (i in seq_along(variables)) {
+    for (j in seq_along(variables)) {
+
+      impulse <- variables[i]
+      response <- variables[j]
+
+      var_y <- var_all_levels[[impulse]][[response]]
+      lp_y <- lp_all_levels[[impulse]][[response]]
+      horizon <- 0:irf_horizon
+
+      plot(
+        horizon, var_y,
+        type = "n",
+        ylim = range(c(var_y, lp_y, 0)),
+        xlab = "",
+        ylab = "",
+        axes = FALSE
+      )
+
+      abline(h = 0, lty = 3, col = "grey40")
+
+      lines(horizon, var_y, lty = 1, lwd = 1.5)
+      lines(horizon, lp_y, lty = 2, lwd = 1.5)
+
+      if (i == 3) {
+        axis(1, at = seq(0, 48, by = 12), cex.axis = 0.65)
+      }
+
+      axis(2, cex.axis = 0.6, las = 1)
+
+      # Column labels
+      if (i == 1) {
+        mtext(
+          response,
+          side = 3,
+          line = 0.2,
+          font = 2,
+          cex = 0.85
+        )
+      }
+
+      # Row labels
+      if (j == 1) {
+        mtext(
+          impulse,
+          side = 2,
+          line = 2.0,
+          font = 2,
+          cex = 0.85
+        )
+      }
+    }
+  }
+
+  # Shared legend
+  par(mar = c(0, 0, 0, 0), pty = "m")
+  plot.new()
+
+  legend(
+    "top",
+    legend = c("Reduced-form VAR", "Local Projections"),
+    lty = c(1, 2),
+    lwd = 1.5,
+    horiz = TRUE,
+    bty = "n",
+    cex = 0.85
+  )
+
+  text(0.5, 0.12, "Horizon (months)", cex = 0.8)
+
+  # Shared grid labels
+  mtext(
+    "Response",
+    side = 3,
+    outer = TRUE,
+    line = 0.6,
+    font = 2,
+    cex = 0.85
+  )
+
+  mtext(
+    "Impulse",
+    side = 2,
+    outer = TRUE,
+    line = 1.5,
+    font = 2,
+    cex = 0.85
+  )
+}
+
+```
+
+
+## Local Projections {.t}
+
+\vspace{0.6em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Local projections (Jordà, 2005) estimate IRFs directly through horizon-specific regressions
+
+\vspace{-0.7em}
+
+\footnotesize
+$$
+y_{t+h}
+=
+\alpha_h+\Psi_h y_t
++\sum_{\ell=1}^{p}\Gamma_{\ell,h}y_{t-\ell}
++v_{t+h}^{(h)}
+$$
+
+\vspace{0.3em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} A separate regression is estimated for each horizon $h=0,\ldots,H$
+
+\vspace{0.3em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} The coefficients $\widehat{\Psi}_h$ give the reduced-form responses to unit innovations, holding the other contemporaneous innovations fixed
+
+\vspace{0.35em}
+
+\normalsize
+
+\textcolor{navyblue}{$\Rightarrow$} IRFs are obtained directly, without iterating a fitted VAR
+
+---
+
+
+## VARs versus Local Projections {.t}
+
+\vspace{0.5em}
+
+\centering
+\footnotesize
+
+\renewcommand{\arraystretch}{1.7}
+\setlength{\tabcolsep}{5pt}
+
+\begin{tabular}{p{1.8cm}p{3.8cm}p{3.8cm}}
+
+\hline
+
+& \textbf{VAR} & \textbf{Local Projections} \\
+
+\hline
+
+\textbf{Estimation}
+& Estimates one dynamic system; IRFs are obtained by iterating its estimated coefficients
+& Estimates a separate regression at each horizon, without imposing a common dynamic structure \\
+
+\hline
+
+\textbf{Advantages}
+& Typically more precise and smoother IRFs, as information is shared across horizons
+& More flexible response shapes; often less bias when the VAR lag structure is misspecified \\
+
+\hline
+
+\textbf{Disadvantages}
+& Misspecified dynamics can introduce bias that propagates across horizons
+& Higher sampling variance, especially at longer horizons; potentially irregular IRFs \\
+
+\hline
+
+\end{tabular}
+
+\vspace{0.7em}
+
+\raggedright
+\footnotesize
+
+\textcolor{navyblue}{$\Rightarrow$} Both target the same population IRFs with sufficiently rich lag structures, but differ in their finite-sample bias-variance trade-off
+
+
+---
+
+
+## Reduced-Form LP Implementation {.t}
+
+\vspace{0.75em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Estimate horizon-specific OLS regressions using \texttt{lm.fit()}
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Same IP, CPI and FFR transformations, with 14 lagged controls and 48-month horizons
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Contemporaneous regressors enter jointly, yielding nine unorthogonalized reduced-form IRFs
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Accumulate responses once for IP and FFR, twice for CPI
+
+\vspace{0.55em}
+
+\normalsize
+
+\textcolor{navyblue}{$\Rightarrow$} VAR and LP estimates are compared for the same unit innovations
+
+---
+
+
+## Reduced-Form IRFs: VAR versus LP
+
+```{r}
+#| echo: false
+#| fig-width: 9.0
+#| fig-height: 5.5
+#| out-width: 100%
+#| fig-align: center
+
+plot_var_lp_grid()
+```
+
+---
+
+## Reduced-Form IRFs: VAR versus LP {.t}
+
+\vspace{0.6em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} All nine IRFs coincide on impact, with larger differences at longer horizons
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} LP estimates exhibit less smoothness and different persistence across the system
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Following an FFR innovation:
+
+\vspace{0.15em}
+
+\footnotesize
+\begin{itemize}
+
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+IP falls under both estimators, with a larger long-horizon decline under LP
+
+\vspace{0.15em}
+
+\item[\raise0.15ex\hbox{\textcolor{navyblue}{\tiny$\circ$}}]
+CPI initially rises under both, but the LP response subsequently declines toward zero while the VAR response continues rising
+
+\end{itemize}
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\Rightarrow$} The price-puzzle pattern appears initially, but its persistence depends on the estimator
+
+
+# Structural IRFs Using Local Projections
+
+
+## Structural LP: Identification and Estimation {.t}
+
+\vspace{0.5em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} LPs accommodate recursive, long-run, sign and external-instrument identification
+
+\vspace{0.35em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} We adopt recursive identification with FFR last, matching the SVAR
+
+\vspace{-0.6em}
+
+\footnotesize
+$$
+\begin{aligned}
+y_{j,t+h}={}&\alpha_{j,h}+\beta_{j,h}FFR_t
++\gamma_{j,h}'(IP_t,CPI_t)'\\
+&+\sum_{\ell=1}^{14}\delta_{j,h,\ell}'y_{t-\ell}
++v_{j,t+h}^{(h)}
+\end{aligned}
+$$
+
+\vspace{0.25em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Use \texttt{lp\_lin()} with Cholesky identification and horizon-specific regressions
+
+\vspace{-0.5em}
+
+\footnotesize
+$$
+\widehat{\Theta}_{j,3,h}^{LP}
+=
+\widehat{b}_{33}^{0}\widehat{\beta}_{j,h}
+$$
+
+\vspace{0.35em}
+
+\normalsize
+
+\textcolor{navyblue}{$\Rightarrow$} Same identifying assumptions and shock normalization, but direct LP estimation
+
+---
+
+```{r}
+#| include: false
+
+# Recursive structural LP: IP, CPI, FFR
+lp_struct <- lpirfs::lp_lin(
+  endog_data = as.data.frame(x[, variables, drop = FALSE]),
+  lags_endog_lin = p_aic + 1,
+  trend = 0,
+  shock_type = 1,
+  confint = 1.96,
+  hor = irf_horizon,
+  num_cores = 1
+)
+
+# Extract responses to a unit FFR impact
+mp_lp_unit <- t(
+  lp_struct$irf_lin_mean[, , 3]
+)
+
+colnames(mp_lp_unit) <- variables
+
+# Match recursive SVAR shock magnitude
+mp_impact <- policy_svar_levels$FFR[1]
+
+mp_lp_struct <- mp_lp_unit * mp_impact
+
+# Responses in levels
+policy_lp_struct_levels <- to_levels(
+  mp_lp_struct
+)
+
+# Verify dimensions and correspondence with direct OLS
+stopifnot(
+  all(dim(mp_lp_unit) == c(irf_horizon + 1, 3))
+)
+
+lp_difference <- max(abs(
+  mp_lp_unit - lp_irfs[, , "FFR"]
+))
+
+stopifnot(lp_difference < 1e-6)
+
+```
+
+## Structural IRFs: SVAR versus LP
+
+```{r}
+#| echo: false
+#| fig-width: 9.0
+#| fig-height: 3.7
+
+plot_comparison(
+  list(
+    policy_svar_levels,
+    policy_lp_struct_levels
+  ),
+  labels = c(
+    "Recursive SVAR",
+    "Structural LP"
+  ),
+  line_types = c(1, 2)
+)
+```
+
+---
+
+## Structural LP: Interpretation {.t}
+
+\vspace{0.65em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} Both estimators impose the same FFR-last recursive restrictions and agree on impact
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} LP responses exhibit different medium- and long-horizon dynamics relative to the SVAR
+
+\vspace{0.45em}
+
+\normalsize
+
+\textcolor{navyblue}{$\bullet$} CPI initially rises under both methods, but the LP response subsequently weakens toward zero
+
+\vspace{0.55em}
+
+\normalsize
+
+\textcolor{navyblue}{$\Rightarrow$} Recursive identification does not remove the short-run price-puzzle pattern; its persistence depends on the estimator
