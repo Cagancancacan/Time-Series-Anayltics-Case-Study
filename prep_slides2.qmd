@@ -116,9 +116,9 @@ execute:
   \Delta FFR_t
   \right)'.$$
 
-- We computed reduced-form impulse responses over 48 months, including bootstrap confidence intervals, and accumulated the responses to recover the original variables in levels.
+- We computed reduced-form impulse responses over 48 months, including bootstrap confidence intervals, and accumulated the responses to recover the original variables in levels
 
-- Following a positive FFR innovation, industrial production declined while the CPI level increased, suggesting a **price-puzzle-like response**.
+- Following a positive FFR innovation, industrial production declined while the CPI level increased, suggesting a **price-puzzle-like response**
 
 - However, a reduced-form FFR innovation is a forecast error, not necessarily an exogenous monetary-policy shock
 
