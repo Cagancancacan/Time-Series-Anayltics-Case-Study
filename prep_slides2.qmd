@@ -952,33 +952,6 @@ $\bullet$ `shock` selects the contemporaneous impulse variable; `contemp_data` s
 $\Rightarrow$ Comparing these LPs with reduced-form VAR IRFs isolates differences between direct and iterated dynamic estimation
 
 
-## Identification Strategies for Structural LPs {.t}
-
-\normalsize
-
-Local projections estimate dynamic responses directly, but causal interpretation still requires identifying the structural disturbance
-
-\small
-
-**Recursive restrictions:** Impose contemporaneous timing assumptions through an ordered impact matrix
-
-\begingroup
-\footnotesize
-\leftskip=1em
-\noindent
-$\bullet$ Example: IP and CPI cannot respond immediately to an unexpected FFR shock
-\par
-\endgroup
-
-**External instruments (LP-IV):** Use an instrument correlated with the policy shock but exogenous to other structural disturbances
-
-**Sign or long-run restrictions:** Identify shocks by restricting selected responses rather than relying only on contemporaneous zeros
-
-\vspace{0.3em}
-
-$\Rightarrow$ Here: Use the baseline Cholesky restrictions so that the structural VAR and LP differ in estimation, not identification
-
-
 ## Reduced-Form IRFs: VAR versus LP {.t}
 
 ```{r}
@@ -1138,6 +1111,34 @@ $\bullet$ For IP and CPI shocks, structural identification can combine several r
 \vspace{0.3em}
 
 $\Rightarrow$ **Key distinction:** Same LP estimation, different shock identification and normalization
+
+
+## Identification Strategies for Structural LPs {.t}
+
+\normalsize
+
+Local projections estimate dynamic responses directly, but causal interpretation still requires identifying the structural disturbance
+
+\small
+
+**Recursive restrictions:** Impose contemporaneous timing assumptions through an ordered impact matrix
+
+\begingroup
+\footnotesize
+\leftskip=1em
+\noindent
+$\bullet$ Example: IP and CPI cannot respond immediately to an unexpected FFR shock
+\par
+\endgroup
+
+**External instruments (LP-IV):** Use an instrument correlated with the policy shock but exogenous to other structural disturbances
+
+**Sign or long-run restrictions:** Identify shocks by restricting selected responses rather than relying only on contemporaneous zeros
+
+\vspace{0.3em}
+
+$\Rightarrow$ Here: Use the baseline Cholesky restrictions so that the structural VAR and LP differ in estimation, not identification
+
 
 
 ## Structural IRFs: Recursive SVAR versus LP {.t}
