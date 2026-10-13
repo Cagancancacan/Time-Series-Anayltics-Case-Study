@@ -17,7 +17,7 @@ library(car)
 library(lpirfs)
 
 # Dataset
-input_csv <- "case2_macro_proxies.csv"
+input_csv <- "case2_dataset.csv"
 
 # Global settings
 set.seed(123)
