@@ -1450,37 +1450,30 @@ $\bullet$ Violations can distort the timing and persistence of the estimated IRF
 
 
 
-
-## Common-Sample Comparison and Shock Magnitude {.t}
-
-\normalsize
-
-Both specifications use February 1994--December 2019 and the same AIC-selected nine lags
+## Evidence on MP1 Relevance and Stability {.t}
 
 \small
-
-**Recursive SVAR(9):** Identify the third Cholesky innovation, with FFR ordered last
-
-**MP1-first VAR(9):** Identify the first Cholesky innovation, associated with unexpected MP1 movements
-
-Each impulse represents one standard deviation of its own orthogonalized innovation
+The conditional MP1 coefficient is statistically informative about its association with unexpected FFR movements. The companion roots indicate a stable estimated VAR
 
 \begingroup
-\footnotesize
 \leftskip=1em
 \noindent
-$\bullet$ Initial FFR impact in the recursive SVAR: `r sprintf("%.3f", ffr_impact_common)` percentage points
+$\bullet$ These diagnostics support empirical relevance but do not establish correlation with the latent policy shock
 \par
 \noindent
-$\bullet$ Initial FFR impact in the MP1-first VAR: `r sprintf("%.3f", ffr_impact_mp1)` percentage points
+$\bullet$ They cannot rule out contamination from Fed-information effects or other structural disturbances
 \par
 \endgroup
 
-\vspace{0.3em}
-
-$\Rightarrow$ The shocks are standardized separately; their macroeconomic effects are not responses to an equal-sized interest-rate change
-
-
+\footnotesize
+| Diagnostic | Estimate |
+|:--|--:|
+| Proxy-sample observations | `r nrow(W_iv)` |
+| AIC-selected VAR lag order | `r p_iv` |
+| Effective VAR observations | `r nrow(u_iv)` |
+| MP1--FFR residual correlation | `r sprintf("%.3f", proxy_corr)` |
+| Conditional MP1 $F$ statistic | `r sprintf("%.2f", conditional_F)` |
+| Maximum VAR root modulus | `r sprintf("%.3f", max_root)` |
 
 
 ## Structural IRFs: FFR Shock versus MP1 Shock {.t}
@@ -1641,32 +1634,6 @@ $\Rightarrow$ Differences in magnitude reflect both the size of the induced poli
 
 
 
-## Evidence on MP1 Relevance and Stability {.t}
-
-\small
-The conditional MP1 coefficient is statistically informative about its association with unexpected FFR movements. The companion roots indicate a stable estimated VAR
-
-\begingroup
-\leftskip=1em
-\noindent
-$\bullet$ These diagnostics support empirical relevance but do not establish correlation with the latent policy shock
-\par
-\noindent
-$\bullet$ They cannot rule out contamination from Fed-information effects or other structural disturbances
-\par
-\endgroup
-
-\footnotesize
-| Diagnostic | Estimate |
-|:--|--:|
-| Proxy-sample observations | `r nrow(W_iv)` |
-| AIC-selected VAR lag order | `r p_iv` |
-| Effective VAR observations | `r nrow(u_iv)` |
-| MP1--FFR residual correlation | `r sprintf("%.3f", proxy_corr)` |
-| Conditional MP1 $F$ statistic | `r sprintf("%.2f", conditional_F)` |
-| Maximum VAR root modulus | `r sprintf("%.3f", max_root)` |
-
-
 ## Which Identification Is More Trustworthy? {.t}
 
 \normalsize
@@ -1738,10 +1705,149 @@ Report confidence intervals and investigate instrument validity before drawing c
 
 $\Rightarrow$ No single specification resolves the price puzzle conclusively; robust conclusions should survive credible alternatives
 
+---
 
 \appendix
 
-## Appendix: MP1 Lag-Predictability Test {.t}
+
+
+## Appendix A1: Construction of the MP1 Shock Proxy {.t}
+
+\small
+
+**MP1 measures unexpected current-meeting policy-target news** inferred from changes in federal funds futures prices around FOMC announcements
+
+\footnotesize
+
+- **Announcement window:** 10 minutes before to 20 minutes after the FOMC statement
+
+- Federal funds futures reflect expectations of the average effective federal funds rate
+
+- The change in the futures-implied rate captures the unexpected policy component:
+
+\scriptsize
+$$
+\Delta f_e = f_e^{after}-f_e^{before}
+$$
+
+
+## Appendix A1: Construction of the MP1 Shock Proxy {.t}
+
+\footnotesize
+**Adjustment for the timing of the announcement:**
+\scriptsize
+$$
+MP1_e =
+\begin{cases}
+\displaystyle\frac{D_e}{D_e-d_e}\Delta f_e^{current},
+& D_e-d_e>7 \\[6pt]
+\Delta f_e^{next},
+& D_e-d_e\leq7
+\end{cases}
+$$
+
+\footnotesize
+where $D_e$ is the number of days in the month and $d_e$ is the announcement day. For late-month announcements, the next-month futures contract is used
+
+
+**Monthly aggregation:**
+\scriptsize
+$$
+MP1_t=\sum_{e\in\mathcal{E}_t}MP1_e
+$$
+
+- Sum surprises within each month; no-event months are set to zero
+- Sample: February 1994–December 2019 (311 monthly observations)
+
+\footnotesize
+MP1 captures unexpected policy-target news, not the actual policy-rate change or a directly observed structural shock
+
+
+
+## Appendix A2: External-Instrument SVAR (Proxy-SVAR) {.t}
+
+\scriptsize
+
+**Step 1 - Estimate the three-variable reduced-form VAR**
+$$
+y_t=c+\sum_{\ell=1}^{p}A_\ell y_{t-\ell}+u_t,
+\qquad u_t=P\varepsilon_t
+$$
+
+**Step 2 - Use MP1 as an external instrument**
+
+MP1 remains outside the VAR. Validity requires:
+$$
+\operatorname{Cov}(MP1_t,\varepsilon_t^{MP})\neq0,
+\qquad
+\operatorname{Cov}(MP1_t,\varepsilon_t^j)=0
+\quad(j\neq MP)
+$$
+
+**Step 3 - Identify and propagate the policy impact vector**
+
+$$
+g=\operatorname{Cov}(u_t,MP1_t)
+\propto Pe_{MP}
+$$
+
+Normalize to a one-percentage-point FFR increase:
+$$
+b^{MP}=\frac{g}{g_{FFR}}\times1\text{ pp},
+\qquad
+IRF_h^{IV}=\Phi_h b^{MP}
+$$
+
+$\Rightarrow$ MP1 identifies the impact vector; the VAR
+propagates the shock across horizons
+
+
+
+## Appendix A3: LP-IV (Instrumental-Variable Local Projections) {.t}
+
+
+\small
+
+**Step 1 - Instrument the policy-rate movement with MP1**
+
+First-stage regression:
+$$
+\Delta FFR_t
+=\pi MP1_t+\Lambda'X_{t-1}+v_t
+$$
+where $X_{t-1}$ contains lagged macroeconomic controls
+
+**Step 2 - Estimate the response at each horizon using 2SLS**
+$$
+y_{j,t+h}
+=\alpha_{j,h}
++\theta_{j,h}\widehat{\Delta FFR}_t
++\Gamma_{j,h}'X_{t-1}+e_{j,t+h}
+$$
+
+$$
+h=0,1,\ldots,48,
+\qquad j\in\{IP,CPI,FFR\}
+$$
+
+## Appendix A3: LP-IV (Instrumental-Variable Local Projections) {.t}
+
+\small
+
+**Step 3 - Construct the impulse-response functions**
+
+- $\theta_{j,h}$ measures the response to an
+  MP1-instrumented one-percentage-point FFR movement
+- Estimate a separate regression for each horizon
+- Accumulate IP and FFR once, and CPI twice, to
+  reconstruct responses in levels
+
+$\Rightarrow$ MP1 identifies policy-related variation;
+local projections estimate each horizon directly,
+without iterating a VAR
+
+
+## Appendix A4: MP1 Lag-Predictability Test {.t}
 
 \normalsize
 
