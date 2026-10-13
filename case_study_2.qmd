@@ -25,8 +25,8 @@ alpha <- 0.05
 variables <- c("IP", "CPI", "FFR")
 proxy_vars <- c("MP1", variables)
 irf_horizon <- 48
-bootstrap_reps <- 100
-irf_runs <- 100
+bootstrap_reps <- 4999
+irf_runs <- 4999
 irf_ci <- 0.95
 ```
 
@@ -1712,7 +1712,6 @@ p_iv
 
 ### 23. Common-sample recursive SVAR and MP1-first SVAR
 
-
 ```{r}
 #| label: mp1-models-irfs
 
@@ -1786,7 +1785,6 @@ ffr_impact_mp1 <- unname(
   ]
 )
 ```
-
 
 ### 24. MP1, IP, CPI, and FFR response comparison
 
@@ -1963,4 +1961,3 @@ c(
   Lag_predictability_p = lag_exog_p
 )
 ```
-
