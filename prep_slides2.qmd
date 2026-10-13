@@ -1667,37 +1667,6 @@ $\bullet$ They cannot rule out contamination from Fed-information effects or oth
 | Maximum VAR root modulus | `r sprintf("%.3f", max_root)` |
 
 
-## Can MP1 Exogeneity Be Tested? {.t}
-
-\normalsize
-
-Some implications of instrument validity can be examined, but the exclusion restriction is not directly observable
-
-\small
-
-**Lag-predictability test (Stock and Watson, 2018):**
-$$
-H_0:\beta_1=\cdots=\beta_9=0
-$$
-in a regression of $MP1_t$ on nine lags of the three macroeconomic variables
-
-\begingroup
-\footnotesize
-\leftskip=1em
-\noindent
-$\bullet$ Joint F-statistic: `r sprintf("%.2f", lag_exog_F)`; p-value: `r sprintf("%.3f", lag_exog_p)`
-\par
-\noindent
-$\bullet$ This does not reject zero predictability at 5\%, but it does at 10\%
-\par
-\endgroup
-
-**Limitation:** The conditional internal-instrument approach allows dependence on observed lagged information
-
-$\Rightarrow$ The diagnostic cannot establish that MP1 is uncorrelated with contemporaneous non-policy shocks
-
-
-
 ## Which Identification Is More Trustworthy? {.t}
 
 \normalsize
@@ -1769,3 +1738,35 @@ Report confidence intervals and investigate instrument validity before drawing c
 
 $\Rightarrow$ No single specification resolves the price puzzle conclusively; robust conclusions should survive credible alternatives
 
+
+\appendix
+
+## Appendix: MP1 Lag-Predictability Test {.t}
+
+\normalsize
+
+Some implications of instrument validity can be examined, but the exclusion restriction is not directly observable
+
+\small
+
+
+**Lag-predictability test (Stock and Watson, 2018):**
+$$
+H_0:\beta_1=\cdots=\beta_9=0
+$$
+in a regression of $MP1_t$ on nine lags of the three macroeconomic variables
+
+\begingroup
+\footnotesize
+\leftskip=1em
+\noindent
+$\bullet$ Joint F-statistic: `r sprintf("%.2f", lag_exog_F)`; p-value: `r sprintf("%.3f", lag_exog_p)`
+\par
+\noindent
+$\bullet$ This does not reject zero predictability at 5\%, but it does at 10\%
+\par
+\endgroup
+
+**Limitation:** The conditional internal-instrument approach allows dependence on observed lagged information
+
+$\Rightarrow$ The diagnostic cannot establish that MP1 is uncorrelated with contemporaneous non-policy shocks
