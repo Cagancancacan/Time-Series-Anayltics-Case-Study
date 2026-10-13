@@ -1,0 +1,1966 @@
+---
+title: "Case Study 2 -- R Code"
+format: pdf
+editor: visual
+---
+
+### 0. Settings
+
+```{r}
+#| label: packages
+
+# install.packages(c("bootUR", "vars", "car", "lpirfs"))
+
+library(bootUR)
+library(vars)
+library(car)
+library(lpirfs)
+
+# Dataset
+input_csv <- "case2_macro_proxies.csv"
+
+# Global settings
+set.seed(123)
+alpha <- 0.05
+variables <- c("IP", "CPI", "FFR")
+proxy_vars <- c("MP1", variables)
+irf_horizon <- 48
+bootstrap_reps <- 100
+irf_runs <- 100
+irf_ci <- 0.95
+```
+
+# Part I
+
+### 1. Data preparation
+
+```{r}
+#| label: data-import
+
+raw <- read.csv(input_csv, check.names = FALSE)
+
+dat <- raw[, c(
+  "sasdate",
+  "INDPRO",
+  "CPIAUCSL",
+  "FEDFUNDS"
+)]
+
+names(dat)[1] <- "Date"
+
+dat$Date <- as.Date(
+  dat$Date,
+  format = "%m/%d/%Y"
+)
+
+dat <- dat[
+  !is.na(dat$Date) &
+    dat$Date <= as.Date("2019-12-31"),
+]
+
+dat <- dat[order(dat$Date), ]
+
+range(dat$Date)
+```
+
+### 2. Series transformation
+
+```{r}
+#| label: series-transformations
+
+dat_transformed <- data.frame(
+  Date = dat$Date,
+
+  INDPRO = c(
+    NA,
+    diff(log(dat$INDPRO))
+  ),
+
+  CPIAUCSL = c(
+    NA,
+    NA,
+    diff(
+      log(dat$CPIAUCSL),
+      differences = 2
+    )
+  ),
+
+  FEDFUNDS = c(
+    NA,
+    diff(dat$FEDFUNDS)
+  )
+)
+
+# Common sample after differencing for initial specification starts in March 1959
+dat_common <- dat[-c(1, 2), ]
+
+dat_transformed <- dat_transformed[
+  -c(1, 2),
+]
+
+common_start <- c(
+  as.integer(
+    format(dat_common$Date[1], "%Y")
+  ),
+  as.integer(
+    format(dat_common$Date[1], "%m")
+  )
+)
+
+# Original series
+levels_ts <- ts(
+  dat_common[, c(
+    "INDPRO",
+    "CPIAUCSL",
+    "FEDFUNDS"
+  )],
+  start = common_start,
+  frequency = 12
+)
+
+# Common sample series
+transformed_ts <- ts(
+  dat_transformed[, c(
+    "INDPRO",
+    "CPIAUCSL",
+    "FEDFUNDS"
+  )],
+  start = common_start,
+  frequency = 12
+)
+
+range(dat_transformed$Date)
+```
+
+### 3. Series in levels
+
+```{r}
+#| label: figure-level-ip
+
+plot(
+  levels_ts[, "INDPRO"],
+  main = "Industrial Production",
+  xlab = "Year",
+  ylab = "Index"
+)
+```
+
+```{r}
+#| label: figure-level-cpi
+
+plot(
+  levels_ts[, "CPIAUCSL"],
+  main = "Consumer Price Index",
+  xlab = "Year",
+  ylab = "Index"
+)
+```
+
+```{r}
+#| label: figure-level-ffr
+
+plot(
+  levels_ts[, "FEDFUNDS"],
+  main = "Federal Funds Rate",
+  xlab = "Year",
+  ylab = "Percent"
+)
+```
+
+### 4. Transformed series
+
+```{r}
+#| label: figure-transformed-ip
+
+plot(
+  transformed_ts[, "INDPRO"],
+  main = "Output Growth",
+  xlab = "Year",
+  ylab = expression(
+    Delta~log(INDPRO)
+  )
+)
+```
+
+```{r}
+#| label: figure-transformed-cpi
+
+plot(
+  transformed_ts[, "CPIAUCSL"],
+  main = "Change in Inflation",
+  xlab = "Year",
+  ylab = expression(
+    Delta^2~log(CPI)
+  )
+)
+```
+
+```{r}
+#| label: figure-transformed-ffr
+
+plot(
+  transformed_ts[, "FEDFUNDS"],
+  main = "Change in Policy Rate",
+  xlab = "Year",
+  ylab = expression(
+    Delta~FEDFUNDS
+  )
+)
+```
+
+### 5. Unit root testing
+
+```{r}
+#| label: unit-root-tests
+
+# Series for the VAR
+IP  <- log(dat$INDPRO)
+CPI <- log(dat$CPIAUCSL)
+FFR <- dat$FEDFUNDS
+
+
+# Trend specification
+
+IP_trend <- order_integration(
+  IP,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = bootstrap_reps
+)
+
+CPI_trend <- order_integration(
+  CPI,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = bootstrap_reps
+)
+
+FFR_trend <- order_integration(
+  FFR,
+  method = "boot_adf",
+  deterministics = "trend",
+  B = bootstrap_reps
+)
+
+trend_orders <- c(
+  IP  = unname(IP_trend$order_int),
+  CPI = unname(CPI_trend$order_int),
+  FFR = unname(FFR_trend$order_int)
+)
+
+
+# Intercept specification
+
+IP_intercept <- order_integration(
+  IP,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = bootstrap_reps
+)
+
+CPI_intercept <- order_integration(
+  CPI,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = bootstrap_reps
+)
+
+FFR_intercept <- order_integration(
+  FFR,
+  method = "boot_adf",
+  deterministics = "intercept",
+  B = bootstrap_reps
+)
+
+
+intercept_orders <- c(
+  IP  = unname(IP_intercept$order_int),
+  CPI = unname(CPI_intercept$order_int),
+  FFR = unname(FFR_intercept$order_int)
+)
+
+
+# Compare deterministic specifications
+
+unit_root_table <- data.frame(
+  Series = c(
+    "IP",
+    "CPI",
+    "FFR"
+  ),
+
+  Trend = as.integer(
+    trend_orders
+  ),
+
+  Intercept = as.integer(
+    intercept_orders
+  ),
+
+  Different = (
+    trend_orders != intercept_orders
+  )
+)
+
+unit_root_table
+
+
+# Manual unit roots with boot_adf()
+
+urip1 <- boot_adf(diff(diff(IP)), deterministics = "intercept", B = bootstrap_reps)
+urip2 <- boot_adf(diff(IP), deterministics = "intercept", B = bootstrap_reps)
+urip3 <- boot_adf(IP, deterministics = "trend", B = bootstrap_reps)
+
+urcpi1 <- boot_adf(diff(diff(CPI)), deterministics = "intercept", B = bootstrap_reps)
+urcpi2 <- boot_adf(diff(CPI), deterministics = "intercept", B = bootstrap_reps)
+urcpi3 <- boot_adf(CPI, deterministics = "trend", B = bootstrap_reps)
+
+urffr1 <- boot_adf(diff(diff(FFR)), deterministics = "intercept", B = bootstrap_reps)
+urffr2 <- boot_adf(diff(FFR), deterministics = "intercept", B = bootstrap_reps)
+urffr3 <- boot_adf(FFR, deterministics = "trend", B = bootstrap_reps)
+
+unit_root_table_manual <- data.frame(
+  Series = c(
+    "IP",
+    "CPI",
+    "FFR"
+  ),
+  
+  Delta_2_P = c(
+    urip1$p.value,
+    urcpi1$p.value,
+    urffr1$p.value
+  ),
+  
+  Delta_1_P = c(
+    urip2$p.value,
+    urcpi2$p.value,
+    urffr2$p.value
+  ),
+  
+  Delta_0_P = c(
+    urip3$p.value,
+    urcpi3$p.value,
+    urffr3$p.value
+  ),
+  
+  Order = c(
+    as.numeric(1),
+    as.numeric(1),
+    as.numeric(1)
+  )
+)
+
+unit_root_table_manual
+```
+
+### 6. Selected integration order
+
+```{r}
+#| label: selected-integration-order
+
+# Selected deterministic specifications:
+# IP  -> trend
+# CPI -> trend
+# FFR -> intercept
+
+selected_integration_table <- data.frame(
+  Series = c(
+    "IP",
+    "CPI",
+    "FFR"
+  ),
+
+  Deterministic = c(
+    "Trend",
+    "Trend",
+    "Intercept"
+  ),
+
+  Integration_order = c(
+    trend_orders["IP"],
+    trend_orders["CPI"],
+    intercept_orders["FFR"]
+  )
+)
+
+selected_integration_table
+```
+
+### 7. VAR setup
+
+```{r}
+#| label: prepare-var-data
+
+Y <- data.frame(
+  Date = dat_transformed$Date,
+  IP   = dat_transformed$INDPRO,
+  CPI  = dat_transformed$CPIAUCSL,
+  FFR  = dat_transformed$FEDFUNDS
+)
+
+x <- as.matrix(
+  Y[, variables, drop = FALSE]
+)
+
+stopifnot(
+  all(is.finite(x))
+)
+
+c(
+  observations = nrow(x),
+  variables = ncol(x)
+)
+```
+
+### 8. Lag order selection
+
+```{r}
+#| label: select-var-lags
+
+# Two years of monthly lags. 
+# Default setting allows only up to 10L, therefore we manually set the threshold higher since the previous specification was constrained.
+
+lag_max <- 24
+
+lag_selection <- VARselect(
+  x,
+  lag.max = lag_max,
+  type = "const"
+)
+
+lag_table <- data.frame(
+  Criterion = c(
+    "AIC",
+    "HQ",
+    "SC / BIC",
+    "FPE"
+  ),
+
+  Selected_lag = as.integer(c(
+    lag_selection$selection[["AIC(n)"]],
+    lag_selection$selection[["HQ(n)"]],
+    lag_selection$selection[["SC(n)"]],
+    lag_selection$selection[["FPE(n)"]]
+  ))
+)
+
+p_aic <- as.integer(
+  lag_selection$selection[["AIC(n)"]]
+)
+
+p_bic <- as.integer(
+  lag_selection$selection[["SC(n)"]]
+)
+
+# Selected lag orders
+lag_table
+```
+
+### 9. Estimation VAR models
+
+```{r}
+#| label: estimate-var-models
+
+fit_aic <- VAR(
+  x,
+  p = p_aic,
+  type = "const"
+)
+
+fit_bic <- VAR(
+  x,
+  p = p_bic,
+  type = "const"
+)
+```
+
+### 10. VAR stability
+
+```{r}
+#| label: var-stability
+
+roots_aic <- roots(
+  fit_aic,
+  modulus = TRUE
+)
+
+roots_bic <- roots(
+  fit_bic,
+  modulus = TRUE
+)
+
+stability_table <- data.frame(
+  Specification = c(
+    paste0(
+      "AIC VAR(",
+      p_aic,
+      ")"
+    ),
+    paste0(
+      "SC/BIC VAR(",
+      p_bic,
+      ")"
+    )
+  ),
+
+# Only display max roots for interpretability
+  Max_root = c(
+    max(roots_aic),
+    max(roots_bic)
+  ),
+
+  Stable = c(
+    all(roots_aic < 1),
+    all(roots_bic < 1)
+  )
+)
+
+stability_table
+```
+
+### 11. Residual diagnostics
+
+```{r}
+#| label: var-residual-diagnostics
+
+# Common 2-year residual-autocorrelation horizon
+serial_horizon <- 24
+
+stopifnot(
+  p_aic < serial_horizon,
+  p_bic < serial_horizon
+)
+
+run_var_diagnostics <- function(
+  fit,
+  serial_horizon
+) {
+
+  root_moduli <- roots(
+    fit,
+    modulus = TRUE
+  )
+
+  serial_result <- serial.test(
+    fit,
+    lags.pt = serial_horizon,
+    type = "PT.adjusted"
+  )
+
+  arch_result <- arch.test(
+    fit
+  )
+
+  normality_result <- normality.test(
+    fit
+  )
+
+  list(
+    lag = fit$p,
+
+    roots = root_moduli,
+
+    stable = all(
+      root_moduli < 1
+    ),
+
+    max_root = max(
+      root_moduli
+    ),
+
+    serial_test = serial_result,
+
+    serial_p = as.numeric(
+      serial_result$serial$p.value
+    ),
+
+    arch_test = arch_result,
+
+    arch_p = as.numeric(
+      arch_result$arch.mul$p.value
+    ),
+
+    normality_test = normality_result,
+
+    normality_p = as.numeric(
+      normality_result$jb.mul$JB$p.value
+    )
+  )
+}
+
+diag_aic <- run_var_diagnostics(
+  fit_aic,
+  serial_horizon
+)
+
+diag_bic <- run_var_diagnostics(
+  fit_bic,
+  serial_horizon
+)
+```
+
+### 12. Diagnostic results
+
+```{r}
+#| label: diagnostic-summary
+
+diagnostic_table <- data.frame(
+  Criterion = c(
+    "AIC",
+    "SC / BIC"
+  ),
+
+  Selected_lag = c(
+    diag_aic$lag,
+    diag_bic$lag
+  ),
+
+  Stable = c(
+    diag_aic$stable,
+    diag_bic$stable
+  ),
+
+  Max_root = c(
+    diag_aic$max_root,
+    diag_bic$max_root
+  ),
+
+  Serial_p = c(
+    diag_aic$serial_p,
+    diag_bic$serial_p
+  ),
+
+  ARCH_p = c(
+    diag_aic$arch_p,
+    diag_bic$arch_p
+  ),
+
+  Normality_p = c(
+    diag_aic$normality_p,
+    diag_bic$normality_p
+  )
+)
+
+diagnostic_table$Serial_correlation <- ifelse(
+  diagnostic_table$Serial_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table$ARCH_effects <- ifelse(
+  diagnostic_table$ARCH_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table$Normality <- ifelse(
+  diagnostic_table$Normality_p < alpha,
+  "Rejected",
+  "Not rejected"
+)
+
+diagnostic_table
+```
+
+### 13. Granger causality
+
+```{r}
+#| label: granger-causality
+
+# Block-Granger-Causality Testing
+
+# CPI and FFR -> IP
+gc_IP <- causality(
+  fit_aic,
+  cause = c("CPI", "FFR")
+)$Granger
+
+# IP and FFR -> CPI
+gc_CPI <- causality(
+  fit_aic,
+  cause = c("IP", "FFR")
+)$Granger
+
+# IP and CPI -> FFR
+gc_FFR <- causality(
+  fit_aic,
+  cause = c("IP", "CPI")
+)$Granger
+
+granger_block_table <- data.frame(
+  x = c(
+    "CPI + FFR",
+    "IP + FFR",
+    "IP + CPI"
+  ),
+
+  y = c(
+    "IP",
+    "CPI",
+    "FFR"
+  ),
+
+  F_statistic = c(
+    as.numeric(gc_IP$statistic),
+    as.numeric(gc_CPI$statistic),
+    as.numeric(gc_FFR$statistic)
+  ),
+
+  p_value = c(
+    gc_IP$p.value,
+    gc_CPI$p.value,
+    gc_FFR$p.value
+  )
+)
+
+granger_block_table$Decision <- ifelse(
+  granger_block_table$p_value < alpha,
+  "Reject H0",
+  "Do not reject H0"
+)
+
+
+# Six (conditional) pairwise tests
+
+test_IP_CPI <- linearHypothesis(
+  fit_aic$varresult[["CPI"]],
+  paste0(
+    "IP.l",
+    1:p_aic,
+    " = 0"
+  )
+)
+
+# IP -> FFR
+
+test_IP_FFR <- linearHypothesis(
+  fit_aic$varresult[["FFR"]],
+  paste0(
+    "IP.l",
+    1:p_aic,
+    " = 0"
+  )
+)
+
+# CPI -> IP
+
+test_CPI_IP <- linearHypothesis(
+  fit_aic$varresult[["IP"]],
+  paste0(
+    "CPI.l",
+    1:p_aic,
+    " = 0"
+  )
+)
+
+# CPI -> FFR
+
+test_CPI_FFR <- linearHypothesis(
+  fit_aic$varresult[["FFR"]],
+  paste0(
+    "CPI.l",
+    1:p_aic,
+    " = 0"
+  )
+)
+
+# FFR -> IP
+
+test_FFR_IP <- linearHypothesis(
+  fit_aic$varresult[["IP"]],
+  paste0(
+    "FFR.l",
+    1:p_aic,
+    " = 0"
+  )
+)
+
+# FFR -> CPI
+
+test_FFR_CPI <- linearHypothesis(
+  fit_aic$varresult[["CPI"]],
+  paste0(
+    "FFR.l",
+    1:p_aic,
+    " = 0"
+  )
+)
+
+
+# Collect results
+
+granger_pairwise_table <- data.frame(
+  x = c(
+    "IP",
+    "IP",
+    "CPI",
+    "CPI",
+    "FFR",
+    "FFR"
+  ),
+
+  y = c(
+    "CPI",
+    "FFR",
+    "IP",
+    "FFR",
+    "IP",
+    "CPI"
+  ),
+
+  F_statistic = c(
+    test_IP_CPI$F[2],
+    test_IP_FFR$F[2],
+    test_CPI_IP$F[2],
+    test_CPI_FFR$F[2],
+    test_FFR_IP$F[2],
+    test_FFR_CPI$F[2]
+  ),
+
+  p_value = c(
+    test_IP_CPI$`Pr(>F)`[2],
+    test_IP_FFR$`Pr(>F)`[2],
+    test_CPI_IP$`Pr(>F)`[2],
+    test_CPI_FFR$`Pr(>F)`[2],
+    test_FFR_IP$`Pr(>F)`[2],
+    test_FFR_CPI$`Pr(>F)`[2]
+  )
+)
+
+granger_pairwise_table$Decision <- ifelse(
+  granger_pairwise_table$p_value < alpha,
+  "Reject H0",
+  "Do not reject H0"
+)
+
+
+granger_block_table
+granger_pairwise_table
+```
+
+### 14. IRFs in reduced VAR form
+
+```{r}
+#| label: reduced-form-irfs
+
+# Reduced-form IRFs with bootstrap confidence intervals
+irf_results <- irf(
+  fit_aic,
+  impulse = variables,
+  response = variables,
+  n.ahead = irf_horizon,
+  ortho = FALSE,
+  boot = TRUE,
+  ci = irf_ci,
+  runs = irf_runs
+)
+
+# Extract IRFs by impulse
+irf_ip <- irf_results$irf$IP
+irf_cpi <- irf_results$irf$CPI
+irf_ffr <- irf_results$irf$FFR
+
+# Recover point-estimate responses in levels
+# IP  = diff(log(INDPRO))     -> accumulate once
+# CPI = diff2(log(CPIAUCSL))  -> accumulate twice
+# FFR = diff(FEDFUNDS)        -> accumulate once
+
+to_levels <- function(irf_matrix) {
+  
+  data.frame(
+    Horizon = 0:(nrow(irf_matrix) - 1),
+    
+    IP = cumsum(
+      irf_matrix[, "IP"]
+    ),
+    
+    CPI = cumsum(
+      cumsum(irf_matrix[, "CPI"])
+    ),
+    
+    FFR = cumsum(
+      irf_matrix[, "FFR"]
+    )
+  )
+}
+
+# Responses in levels for each impulse
+irf_ip_levels <- to_levels(irf_ip)
+irf_cpi_levels <- to_levels(irf_cpi)
+irf_ffr_levels <- to_levels(irf_ffr)
+```
+
+```{r}
+#| label: figure-reduced-form-irfs
+
+impulses <- c("IP", "CPI", "FFR")
+responses <- c("IP", "CPI", "FFR")
+
+par(
+  mfrow = c(3, 3),
+  mar = c(1.3, 2.2, 1.2, 0.4),
+  oma = c(2.2, 4.2, 2.0, 0.2),
+  cex = 0.8
+)
+
+for (i in seq_along(impulses)) {
+  
+  impulse <- impulses[i]
+  
+  for (j in seq_along(responses)) {
+    
+    response <- responses[j]
+    
+    y <- irf_results$irf[[impulse]][, response]
+    horizon <- 0:(length(y) - 1)
+    
+    plot(
+      horizon,
+      y,
+      type = "l",
+      ylim = range(c(y, 0)),
+      xlab = "",
+      ylab = "",
+      main = "",
+      axes = FALSE,
+      lwd = 1.2
+    )
+    
+    abline(
+      h = 0,
+      lty = 2,
+      col = "grey40"
+    )
+    
+    axis(
+      1,
+      cex.axis = 0.55
+    )
+    
+    axis(
+      2,
+      cex.axis = 0.55
+    )
+    
+    # Response labels
+    if (i == 1) {
+      mtext(
+        response,
+        side = 3,
+        line = 0.15,
+        font = 2,
+        cex = 0.7
+      )
+    }
+  }
+}
+
+# Impulse labels
+mtext(
+  "IP",
+  side = 2,
+  outer = TRUE,
+  at = 5 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "CPI",
+  side = 2,
+  outer = TRUE,
+  at = 3 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "FFR",
+  side = 2,
+  outer = TRUE,
+  at = 1 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+# Common labels
+mtext(
+  "Response",
+  side = 3,
+  outer = TRUE,
+  line = 0.9,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Impulse",
+  side = 2,
+  outer = TRUE,
+  line = 2.0,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Horizon (months)",
+  side = 1,
+  outer = TRUE,
+  line = 1.0,
+  cex = 0.75
+)
+
+par(mfrow = c(1, 1))
+```
+
+```{r}
+#| label: figure-reduced-form-irfs-ci
+
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+impulses <- c("IP", "CPI", "FFR")
+responses <- c("IP", "CPI", "FFR")
+
+par(
+  mfrow = c(3, 3),
+  mar = c(1.3, 2.2, 1.2, 0.4),
+  oma = c(2.2, 4.2, 2.0, 0.2),
+  cex = 0.8
+)
+
+for (i in seq_along(impulses)) {
+  
+  impulse <- impulses[i]
+  
+  for (j in seq_along(responses)) {
+    
+    response <- responses[j]
+    
+    point <- irf_results$irf[[impulse]][, response]
+    lower <- irf_results$Lower[[impulse]][, response]
+    upper <- irf_results$Upper[[impulse]][, response]
+    
+    horizon <- 0:(length(point) - 1)
+    
+    plot_range <- range(
+      c(lower, upper, point, 0)
+    )
+    
+    # Empty plotting region
+    plot(
+      horizon,
+      point,
+      type = "n",
+      ylim = plot_range,
+      xlab = "",
+      ylab = "",
+      main = "",
+      axes = FALSE
+    )
+    
+    # 95% bootstrap confidence interval
+    polygon(
+      c(horizon, rev(horizon)),
+      c(lower, rev(upper)),
+      col = adjustcolor(
+        "grey70",
+        alpha.f = 0.45
+      ),
+      border = NA
+    )
+    
+    # Zero line
+    abline(
+      h = 0,
+      lty = 3,
+      col = "grey40"
+    )
+    
+    # Point estimate
+    lines(
+      horizon,
+      point,
+      lwd = 1.2
+    )
+    
+    axis(
+      1,
+      cex.axis = 0.55
+    )
+    
+    axis(
+      2,
+      cex.axis = 0.55
+    )
+    
+    # Response labels
+    if (i == 1) {
+      mtext(
+        response,
+        side = 3,
+        line = 0.15,
+        font = 2,
+        cex = 0.7
+      )
+    }
+  }
+}
+
+# Impulse labels
+mtext(
+  "IP",
+  side = 2,
+  outer = TRUE,
+  at = 5 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "CPI",
+  side = 2,
+  outer = TRUE,
+  at = 3 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "FFR",
+  side = 2,
+  outer = TRUE,
+  at = 1 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+# Common labels
+mtext(
+  "Response",
+  side = 3,
+  outer = TRUE,
+  line = 0.9,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Impulse",
+  side = 2,
+  outer = TRUE,
+  line = 2.0,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Horizon (months)",
+  side = 1,
+  outer = TRUE,
+  line = 1.0,
+  cex = 0.75
+)
+
+par(mfrow = c(1, 1))
+```
+
+```{r}
+#| label: figure-reduced-form-irfs-levels
+
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+impulses <- c("IP", "CPI", "FFR")
+responses <- c("IP", "CPI", "FFR")
+
+level_irfs <- list(
+  IP = irf_ip_levels,
+  CPI = irf_cpi_levels,
+  FFR = irf_ffr_levels
+)
+
+par(
+  mfrow = c(3, 3),
+  mar = c(1.3, 2.2, 1.2, 0.4),
+  oma = c(2.2, 4.2, 2.0, 0.2),
+  cex = 0.8
+)
+
+for (i in seq_along(impulses)) {
+  
+  impulse <- impulses[i]
+  
+  for (j in seq_along(responses)) {
+    
+    response <- responses[j]
+    
+    y <- level_irfs[[impulse]][[response]]
+    horizon <- level_irfs[[impulse]]$Horizon
+    
+    plot(
+      horizon,
+      y,
+      type = "l",
+      ylim = range(c(y, 0)),
+      xlab = "",
+      ylab = "",
+      main = "",
+      axes = FALSE,
+      lwd = 1.2
+    )
+    
+    abline(
+      h = 0,
+      lty = 2,
+      col = "grey40"
+    )
+    
+    axis(
+      1,
+      cex.axis = 0.55
+    )
+    
+    axis(
+      2,
+      cex.axis = 0.55
+    )
+    
+    # Response labels
+    if (i == 1) {
+      mtext(
+        response,
+        side = 3,
+        line = 0.15,
+        font = 2,
+        cex = 0.7
+      )
+    }
+  }
+}
+
+# Impulse labels
+mtext(
+  "IP",
+  side = 2,
+  outer = TRUE,
+  at = 5 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "CPI",
+  side = 2,
+  outer = TRUE,
+  at = 3 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+mtext(
+  "FFR",
+  side = 2,
+  outer = TRUE,
+  at = 1 / 6,
+  line = 0.5,
+  font = 2,
+  cex = 0.7
+)
+
+# Common labels
+mtext(
+  "Response",
+  side = 3,
+  outer = TRUE,
+  line = 0.9,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Impulse",
+  side = 2,
+  outer = TRUE,
+  line = 2.0,
+  font = 2,
+  cex = 0.75
+)
+
+mtext(
+  "Horizon (months)",
+  side = 1,
+  outer = TRUE,
+  line = 1.0,
+  cex = 0.75
+)
+
+par(mfrow = c(1, 1))
+```
+
+# Part II
+
+### 15. Recursive SVAR identification
+
+```{r}
+#| label: recursive-svar
+
+# Reuse the OLS VAR and reduced-form IRFs estimated in Part I
+irf_svar <- irf(
+  fit_aic,
+  impulse = variables,
+  response = variables,
+  n.ahead = irf_horizon,
+  ortho = TRUE,
+  boot = FALSE
+)
+
+svar_levels <- lapply(irf_svar$irf, to_levels)
+
+# Reduced form point estimates remain unchanged
+rf_var_levels <- list(
+  IP = irf_ip_levels,
+  CPI = irf_cpi_levels,
+  FFR = irf_ffr_levels
+)
+
+
+rf_matched <- setNames(
+  lapply(variables, function(shock) {
+    z <- irf_results$irf[[shock]][, variables, drop = FALSE]
+    own_impact <- irf_svar$irf[[shock]][1, shock]
+    to_levels(z * own_impact)
+  }),
+  variables
+)
+
+# Cholesky impact matrix for the ordering IP-CPI-FFR
+P <- sapply(
+  variables,
+  function(shock) {
+    irf_svar$irf[[shock]][1, variables]
+  }
+)
+
+
+P
+```
+
+### 16. Reduced-form VAR versus recursive SVAR
+
+```{r}
+#| label: plot-function
+#| include: false
+
+plot_irf_matrix <- function(model_levels, labels, lty) {
+
+  oldpar <- par(no.readonly = TRUE)
+  on.exit({
+    layout(1)
+    par(oldpar)
+  }, add = TRUE)
+
+  layout(
+    matrix(c(1:9, 10, 10, 10), nrow = 4, byrow = TRUE),
+    heights = c(1, 1, 1, 0.40)
+  )
+
+  par(
+    mar = c(1.3, 2.2, 1.2, 0.4),
+    oma = c(2.2, 4.2, 2.0, 0.2),
+    cex = 0.8
+  )
+
+  for (i in seq_along(variables)) {
+    impulse <- variables[i]
+
+    for (j in seq_along(variables)) {
+      response <- variables[j]
+      curves <- lapply(
+        model_levels,
+        function(m) m[[impulse]][[response]]
+      )
+      horizon <- model_levels[[1]][[impulse]]$Horizon
+
+      plot(
+        horizon, curves[[1]], type = "n",
+        ylim = range(c(0, unlist(curves))),
+        xlab = "", ylab = "", main = "", axes = FALSE
+      )
+
+      abline(h = 0, lty = 3, col = "grey60")
+      for (k in seq_along(curves)) {
+        lines(
+          horizon, curves[[k]],
+          lty = lty[k], lwd = 1.2, col = "black"
+        )
+      }
+
+      axis(1, at = seq(0, irf_horizon, by = 12), cex.axis = 0.55)
+      axis(2, cex.axis = 0.55)
+
+      if (i == 1) {
+        mtext(
+          response, side = 3, line = 0.15,
+          font = 2, cex = 0.7
+        )
+      }
+    }
+  }
+
+  # Dedicated legend row avoids overlap with the x-axis label.
+  par(mar = c(0, 0, 0, 0))
+  plot.new()
+  legend(
+    x = 0.5, y = 0.74, xjust = 0.5, yjust = 0.5,
+    legend = labels,
+    lty = lty, lwd = 1.2, col = "black",
+    horiz = TRUE, bty = "n",
+    cex = if (length(labels) == 3L) 0.63 else 0.75,
+    seg.len = 2.7
+  )
+  text(0.5, 0.12, "Horizon (months)", cex = 0.75)
+
+  # Adjust row-label coordinates for the legend row.
+  row_at <- (c(2.5, 1.5, 0.5) + 0.40) / 3.40
+  for (i in seq_along(variables)) {
+    mtext(
+      variables[i], side = 2, outer = TRUE,
+      at = row_at[i], line = 0.5, font = 2, cex = 0.7
+    )
+  }
+  mtext("Response", side = 3, outer = TRUE,
+        line = 0.9, font = 2, cex = 0.75)
+  mtext("Impulse", side = 2, outer = TRUE,
+        line = 2.0, font = 2, cex = 0.75)
+}
+```
+
+```{r}
+#| label: figure-reduced-form-versus-svar
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+plot_irf_matrix(
+  model_levels = list(rf_matched, svar_levels),
+  labels = c("Reduced-form VAR", "Recursive SVAR"),
+  lty = c(1, 2)
+)
+```
+
+### 17. Recursive ordering sensitivity
+
+```{r}
+#| label: alternative-orderings
+
+# Reorder the predefined macroeconomic variables; retain AIC lags
+swap_order <- variables[c(2, 1, 3)]
+first_order <- variables[c(3, 1, 2)]
+
+fit_swap <- VAR(
+  x[, swap_order, drop = FALSE],
+  p = p_aic,
+  type = "const"
+)
+
+fit_first <- VAR(
+  x[, first_order, drop = FALSE],
+  p = p_aic,
+  type = "const"
+)
+
+irf_swap <- irf(
+  fit_swap, impulse = variables, response = variables,
+  n.ahead = irf_horizon, ortho = TRUE, boot = FALSE
+)
+
+irf_first <- irf(
+  fit_first, impulse = variables, response = variables,
+  n.ahead = irf_horizon, ortho = TRUE, boot = FALSE
+)
+
+ordering_irfs <- setNames(
+  list(irf_svar$irf, irf_swap$irf, irf_first$irf),
+  c(
+    paste(variables, collapse = "-"),
+    paste(swap_order, collapse = "-"),
+    paste(first_order, collapse = "-")
+  )
+)
+
+ordering_levels <- lapply(ordering_irfs, function(irfs) {
+  setNames(
+    lapply(variables, function(shock) {
+      to_levels(irfs[[shock]][, variables, drop = FALSE])
+    }),
+    variables
+  )
+})
+
+# The two FFR-last orderings produce the same one-SD FFR shock
+stopifnot(
+  max(abs(
+    as.matrix(ordering_levels[[1]][[tail(variables, 1L)]][, variables]) -
+    as.matrix(ordering_levels[[2]][[tail(variables, 1L)]][, variables])
+  )) < 1e-6
+)
+```
+
+```{r}
+#| label: figure-ordering-comparison
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+plot_irf_matrix(
+  model_levels = ordering_levels,
+  labels = names(ordering_levels),
+  lty = 1:3
+)
+```
+
+### 18. Reduced-form local projections
+
+```{r}
+#| label: reduced-form-lp
+
+# OLS local projections (no instrument and no Cholesky scaling)
+x_lp <- as.data.frame(x)
+
+lp_fits <- setNames(
+  lapply(variables, function(shock) {
+    lp_lin_iv(
+      endog_data = x_lp,
+      shock = x_lp[, shock, drop = FALSE],
+      contemp_data = x_lp[
+        , setdiff(variables, shock), drop = FALSE
+      ],
+      use_twosls = FALSE,
+      lags_endog_lin = p_aic,
+      trend = 0,
+      confint = 1.96,
+      use_nw = TRUE,
+      hor = irf_horizon + 1L,
+      num_cores = 1
+    )
+  }),
+  variables
+)
+
+rf_lp_raw <- lapply(lp_fits, function(result) {
+  z <- t(result$irf_lin_mean)
+  colnames(z) <- variables
+  stopifnot(
+    nrow(z) == irf_horizon + 1L,
+    all(is.finite(z))
+  )
+  z
+})
+
+rf_lp_levels <- lapply(rf_lp_raw, to_levels)
+```
+
+### 19. Reduced-form VAR versus reduced-form LP
+
+```{r}
+#| label: figure-reduced-form-var-lp
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+plot_irf_matrix(
+  model_levels = list(rf_var_levels, rf_lp_levels),
+  labels = c("Reduced-form VAR", "Reduced-form LP"),
+  lty = c(1, 2)
+)
+```
+
+### 20. Structural local projections
+
+```{r}
+#| label: structural-lp
+
+# Apply exactly the same Cholesky impact matrix P as in Section 15
+lp_struct_raw <- setNames(
+  lapply(variables, function(shock) {
+    matrix(
+      NA_real_, nrow = irf_horizon + 1L,
+      ncol = length(variables),
+      dimnames = list(NULL, variables)
+    )
+  }),
+  variables
+)
+
+for (h in seq_len(irf_horizon + 1L)) {
+  Psi <- sapply(
+    variables,
+    function(shock) rf_lp_raw[[shock]][h, variables]
+  )
+
+  Theta <- Psi %*% P
+
+  for (j in seq_along(variables)) {
+    lp_struct_raw[[j]][h, ] <- Theta[, j]
+  }
+}
+
+lp_struct_levels <- lapply(lp_struct_raw, to_levels)
+
+# Impact consistency: Psi(0)=I and Theta(0)=P
+Psi_0 <- sapply(
+  variables,
+  function(shock) rf_lp_raw[[shock]][1, variables]
+)
+Theta_0 <- sapply(
+  variables,
+  function(shock) lp_struct_raw[[shock]][1, variables]
+)
+
+
+Psi_0
+Theta_0
+```
+
+### 21. Recursive SVAR versus structural LP
+
+```{r}
+#| label: figure-svar-structural-lp
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+plot_irf_matrix(
+  model_levels = list(svar_levels, lp_struct_levels),
+  labels = c("Recursive SVAR", "Structural LP"),
+  lty = c(1, 2)
+)
+```
+
+### 22. MP1 proxy: common sample and endogenous lag selection
+
+```{r}
+#| label: mp1-sample-lag-selection
+
+# Reduced common sample
+proxy_dates <- as.Date(
+  raw$sasdate,
+  "%m/%d/%Y"
+)
+
+mp1 <- raw[[proxy_vars[1]]][
+  match(Y$Date, proxy_dates)
+]
+
+valid <- which(is.finite(mp1))
+
+stopifnot(
+  length(valid) > 100L,
+  all(diff(valid) == 1L)
+)
+
+x_iv <- Y[
+  valid, variables, drop = FALSE
+]
+
+W_iv <- data.frame(
+  mp1[valid],
+  x_iv
+)
+
+names(W_iv)[1] <- proxy_vars[1]
+
+W_iv <- W_iv[
+  , proxy_vars, drop = FALSE
+]
+
+stopifnot(
+  identical(names(W_iv), proxy_vars)
+)
+
+# AIC selects the augmented VAR lag order
+proxy_lag_selection <- VARselect(
+  W_iv,
+  lag.max = p_aic,
+  type = "const"
+)
+
+p_iv <- as.integer(
+  proxy_lag_selection$selection[["AIC(n)"]]
+)
+
+p_iv
+```
+
+### 23. Common-sample recursive SVAR and MP1-first SVAR
+
+
+```{r}
+#| label: mp1-models-irfs
+
+# Same sample and selected lag order
+fit_common <- VAR(
+  x_iv,
+  p = p_iv,
+  type = "const"
+)
+
+fit_proxy <- VAR(
+  W_iv,
+  p = p_iv,
+  type = "const"
+)
+
+# One-SD FFR-last recursive innovation
+irf_common <- irf(
+  fit_common,
+  impulse = tail(variables, 1L),
+  response = variables,
+  n.ahead = irf_horizon,
+  ortho = TRUE,
+  boot = FALSE
+)
+
+# One-SD MP1-first orthogonalized innovation
+irf_proxy <- irf(
+  fit_proxy,
+  impulse = proxy_vars[1],
+  response = proxy_vars,
+  n.ahead = irf_horizon,
+  ortho = TRUE,
+  boot = FALSE
+)
+
+# Common-sample FFR-shock responses
+policy_common <- to_levels(
+  irf_common$irf[[tail(variables, 1L)]]
+)
+
+# MP1-associated macroeconomic responses
+policy_proxy <- to_levels(
+  irf_proxy$irf[[proxy_vars[1]]][
+    , variables, drop = FALSE
+  ]
+)
+
+# MP1 response to its own innovation
+policy_mp1 <- data.frame(
+  Horizon = 0:irf_horizon,
+  unname(
+    irf_proxy$irf[[proxy_vars[1]]][
+      , proxy_vars[1]
+    ]
+  )
+)
+
+names(policy_mp1)[2] <- proxy_vars[1]
+
+# Initial FFR impacts (not normalization constants)
+ffr_impact_common <- unname(
+  irf_common$irf[[tail(variables, 1L)]][
+    1, tail(variables, 1L)
+  ]
+)
+
+ffr_impact_mp1 <- unname(
+  irf_proxy$irf[[proxy_vars[1]]][
+    1, tail(variables, 1L)
+  ]
+)
+```
+
+
+### 24. MP1, IP, CPI, and FFR response comparison
+
+```{r}
+#| label: figure-mp1-ffr-comparison
+#| echo: false
+#| fig-width: 7.0
+#| fig-height: 5.0
+#| fig-align: center
+
+responses <- proxy_vars
+oldpar <- par(no.readonly = TRUE)
+
+layout(
+  matrix(c(1, 2, 3, 4, 5, 5), nrow = 3, byrow = TRUE),
+  heights = c(1, 1, 0.34)
+)
+
+par(
+  mar = c(1.9, 3.0, 1.35, 0.5),
+  oma = c(1.5, 0.5, 0.5, 0.2),
+  mgp = c(1.5, 0.45, 0),
+  cex = 0.8
+)
+
+for (response in responses) {
+  horizon <- 0:irf_horizon
+
+  if (response == proxy_vars[1]) {
+    y_proxy <- policy_mp1[[proxy_vars[1]]]
+    bounds <- range(c(y_proxy, 0))
+  } else {
+    y_common <- policy_common[[response]]
+    y_proxy <- policy_proxy[[response]]
+    bounds <- range(c(y_common, y_proxy, 0))
+  }
+
+  plot(
+    horizon, y_proxy, type = "n", ylim = bounds,
+    xlab = "", ylab = "", main = "", axes = FALSE
+  )
+  abline(h = 0, lty = 3, col = "grey60")
+
+  if (response != proxy_vars[1]) {
+    lines(horizon, y_common, lty = 1, lwd = 1.2, col = "black")
+  }
+  lines(horizon, y_proxy, lty = 2, lwd = 1.2, col = "black")
+
+  axis(1, at = seq(0, irf_horizon, by = 12), cex.axis = 0.55)
+  axis(2, cex.axis = 0.55)
+  mtext(response, side = 3, line = 0.15, font = 2, cex = 0.75)
+}
+
+par(mar = c(0, 0, 0, 0))
+plot.new()
+legend(
+  x = 0.5, y = 0.74, xjust = 0.5, yjust = 0.5,
+  legend = c("Recursive FFR shock", "MP1-associated shock"),
+  lty = c(1, 2), lwd = 1.2, col = "black",
+  horiz = TRUE, bty = "n", cex = 0.76, seg.len = 3
+)
+text(0.5, 0.12, "Horizon (months)", cex = 0.75)
+
+layout(1)
+par(oldpar)
+```
+
+### 25. MP1 relevance and VAR stability diagnostics
+
+```{r}
+#| label: mp1-relevance-stability
+
+u_iv <- residuals(fit_proxy)
+proxy_corr <- cor(
+  u_iv[, proxy_vars[1]],
+  u_iv[, tail(variables, 1L)]
+)
+
+lag_terms <- grep(
+  "\\.l[0-9]+$",
+  colnames(fit_proxy$datamat),
+  value = TRUE
+)
+
+first_stage <- lm(
+  reformulate(
+    c(proxy_vars[1], lag_terms),
+    response = tail(variables, 1L)
+  ),
+  data = as.data.frame(fit_proxy$datamat)
+)
+
+# Conditional coefficient F: descriptive relevance diagnostic
+conditional_F <- unname(
+  coef(summary(first_stage))[proxy_vars[1], "t value"]^2
+)
+
+max_root <- max(roots(fit_proxy, modulus = TRUE))
+
+mp1_diagnostics <- data.frame(
+  Diagnostic = c(
+    "Proxy observations",
+    "Selected augmented-VAR lags",
+    "Effective VAR observations",
+    "MP1-FFR residual correlation",
+    "Conditional MP1 coefficient t-squared",
+    "Largest companion-root modulus"
+  ),
+  Estimate = c(
+    nrow(W_iv), p_iv, nrow(u_iv),
+    proxy_corr, conditional_F, max_root
+  )
+)
+
+mp1_diagnostics
+```
+
+### 26. MP1 lag-predictability diagnostic
+
+```{r}
+#| label: mp1-lag-predictability
+
+idx <- (p_iv + 1L):nrow(W_iv)
+
+macro_lags <- do.call(
+  cbind,
+  lapply(seq_len(p_iv), function(L) {
+
+    z <- x_iv[
+      idx - L, variables, drop = FALSE
+    ]
+
+    names(z) <- paste0(
+      variables, "_L", L
+    )
+
+    rownames(z) <- NULL
+    z
+  })
+)
+
+lag_test_data <- data.frame(
+  W_iv[[proxy_vars[1]]][idx],
+  macro_lags
+)
+
+names(lag_test_data)[1] <- proxy_vars[1]
+
+lag_exog_fit <- lm(
+  reformulate(
+    names(macro_lags),
+    response = proxy_vars[1]
+  ),
+  data = lag_test_data
+)
+
+f_stat <- summary(lag_exog_fit)$fstatistic
+
+lag_exog_F <- unname(
+  f_stat["value"]
+)
+
+lag_exog_p <- unname(
+  pf(
+    f_stat["value"],
+    f_stat["numdf"],
+    f_stat["dendf"],
+    lower.tail = FALSE
+  )
+)
+
+c(
+  Lag_predictability_F = lag_exog_F,
+  Lag_predictability_p = lag_exog_p
+)
+```
+
